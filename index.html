@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineScope — Movie Reviewer & Explorer</title>
+    <meta name="description" content="Search any movie and discover detailed reviews, budget, box office collection, where to watch, cast, and more. Your ultimate movie companion.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ============ HERO / LANDING ============ -->
+    <header id="hero">
+        <div class="hero-bg-overlay"></div>
+        <nav class="navbar">
+            <a href="#" class="logo" onclick="goHome()">
+                <span class="logo-icon">🎬</span>
+                <span class="logo-text">Cine<span class="accent">Scope</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="#" onclick="showTrending()">Trending</a>
+                <a href="#" onclick="showTopRated()">Top Rated</a>
+                <a href="#" onclick="showUpcoming()">Upcoming</a>
+            </div>
+        </nav>
+        <div class="hero-content">
+            <h1 class="hero-title">Discover <span class="gradient-text">Every Detail</span> About Any Movie</h1>
+            <p class="hero-subtitle">Reviews • Budget • Box Office • Where to Watch • Cast & Crew</p>
+            <div class="search-container" id="search-container">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="Search for a movie..." autocomplete="off">
+                    <button id="search-btn" onclick="searchMovies()">Search</button>
+                </div>
+                <div id="search-suggestions" class="search-suggestions hidden"></div>
+            </div>
+        </div>
+        <div class="scroll-indicator" id="scroll-indicator">
+            <span>Scroll to explore trending</span>
+            <div class="scroll-arrow">↓</div>
+        </div>
+    </header>
+
+    <!-- ============ RESULTS / GRID ============ -->
+    <section id="results-section" class="section hidden">
+        <div class="container">
+            <div class="section-header">
+                <h2 id="results-title">Search Results</h2>
+                <button class="back-btn" onclick="goHome()">← Back to Home</button>
+            </div>
+            <div id="results-grid" class="movie-grid"></div>
+            <div id="pagination" class="pagination hidden"></div>
+        </div>
+    </section>
+
+    <!-- ============ TRENDING ============ -->
+    <section id="trending-section" class="section">
+        <div class="container">
+            <h2 class="section-title">🔥 Trending Now</h2>
+            <div id="trending-grid" class="movie-scroll"></div>
+        </div>
+    </section>
+
+    <!-- ============ MOVIE DETAIL MODAL ============ -->
+    <div id="movie-modal" class="modal hidden">
+        <div class="modal-overlay" onclick="closeModal()"></div>
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- ============ LOADING ============ -->
+    <div id="loading" class="loading hidden">
+        <div class="loader">
+            <div class="loader-ring"></div>
+            <span>Loading...</span>
+        </div>
+    </div>
+
+    <!-- ============ API KEY MODAL ============ -->
+    <div id="api-key-modal" class="api-key-modal">
+        <div class="api-key-content">
+            <div class="api-key-icon">🔑</div>
+            <h2>Welcome to CineScope</h2>
+            <p>To get started, enter your free <a href="https://www.themoviedb.org/settings/api" target="_blank">TMDB API Key</a></p>
+            <ol class="api-steps">
+                <li>Go to <a href="https://www.themoviedb.org/signup" target="_blank">themoviedb.org</a> and create a free account</li>
+                <li>Navigate to Settings → API → Create → Developer</li>
+                <li>Copy your API Key (v3 auth) and paste below</li>
+            </ol>
+            <input type="text" id="api-key-input" placeholder="Paste your TMDB API key here...">
+            <button id="api-key-submit" onclick="saveApiKey()">Get Started →</button>
+            <p class="api-note">Your key is stored locally in your browser only.</p>
+        </div>
+    </div>
+
+    <!-- ============ TOAST ============ -->
+    <div id="toast" class="toast hidden"></div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Powered by <a href="https://www.themoviedb.org/" target="_blank">TMDB</a> • Built with ❤️ by CineScope</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

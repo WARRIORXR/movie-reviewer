@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineScope — Movie Reviewer & Explorer</title>
+    <meta name="description" content="Search any movie and discover detailed reviews, budget, box office collection, where to watch, cast, and more. Your ultimate movie companion powered by TMDB, OMDB, Watchmode & YouTube.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ─── NAVBAR ─── -->
+    <nav class="navbar" id="navbar">
+        <a href="#" class="logo" onclick="goHome(); return false;">
+            <span class="logo-icon">🎬</span>
+            <span class="logo-text">Cine<span class="accent">Scope</span></span>
+        </a>
+        <div class="nav-center">
+            <div class="nav-search-wrapper" id="nav-search-wrapper">
+                <span class="nav-search-icon">🔍</span>
+                <input type="text" id="nav-search-input" placeholder="Quick search..." autocomplete="off">
+                <div id="nav-suggestions" class="nav-suggestions hidden"></div>
+            </div>
+        </div>
+        <div class="nav-links">
+            <a href="#" onclick="showCategory('trending'); return false;">Trending</a>
+            <a href="#" onclick="showCategory('top-rated'); return false;">Top Rated</a>
+            <a href="#" onclick="showCategory('upcoming'); return false;">Upcoming</a>
+            <a href="#" onclick="showCategory('now-playing'); return false;">Now Playing</a>
+        </div>
+    </nav>
+
+    <!-- ─── HERO ─── -->
+    <header id="hero">
+        <div class="hero-particles" id="hero-particles"></div>
+        <div class="hero-bg-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-badge">🔥 Powered by 4 APIs — TMDB · OMDB · Watchmode · YouTube</div>
+            <h1 class="hero-title">
+                Discover <span class="gradient-text">Every Detail</span><br>
+                About Any Movie
+            </h1>
+            <p class="hero-subtitle">
+                Ratings from IMDb, Rotten Tomatoes & Metacritic &bull; Budget & Box Office &bull;
+                Where to Stream &bull; Trailers &bull; Cast & Crew
+            </p>
+            <div class="search-container" id="hero-search">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="Search for a movie..." autocomplete="off">
+                    <button id="search-btn" onclick="searchMovies()">
+                        <span>Search</span>
+                        <span class="btn-arrow">→</span>
+                    </button>
+                </div>
+                <div id="search-suggestions" class="search-suggestions hidden"></div>
+            </div>
+            <div class="hero-stats">
+                <div class="stat-item"><span class="stat-value" id="stat-movies">900K+</span><span class="stat-label">Movies</span></div>
+                <div class="stat-divider"></div>
+                <div class="stat-item"><span class="stat-value">4</span><span class="stat-label">Data Sources</span></div>
+                <div class="stat-divider"></div>
+                <div class="stat-item"><span class="stat-value">200+</span><span class="stat-label">Streaming Services</span></div>
+            </div>
+        </div>
+        <div class="scroll-indicator" id="scroll-indicator">
+            <span>Scroll to explore</span>
+            <div class="scroll-arrow">↓</div>
+        </div>
+    </header>
+
+    <!-- ─── TRENDING SECTION ─── -->
+    <section id="trending-section" class="section">
+        <div class="container">
+            <div class="section-header-flex">
+                <h2 class="section-title"><span class="title-icon">🔥</span> Trending This Week</h2>
+                <button class="see-all-btn" onclick="showCategory('trending')">See All →</button>
+            </div>
+            <div id="trending-grid" class="movie-scroll"></div>
+        </div>
+    </section>
+
+    <!-- ─── NOW PLAYING SECTION ─── -->
+    <section id="now-playing-section" class="section">
+        <div class="container">
+            <div class="section-header-flex">
+                <h2 class="section-title"><span class="title-icon">🎬</span> Now Playing in Theaters</h2>
+                <button class="see-all-btn" onclick="showCategory('now-playing')">See All →</button>
+            </div>
+            <div id="now-playing-grid" class="movie-scroll"></div>
+        </div>
+    </section>
+
+    <!-- ─── RESULTS SECTION ─── -->
+    <section id="results-section" class="section hidden">
+        <div class="container">
+            <div class="section-header">
+                <h2 id="results-title">Search Results</h2>
+                <button class="back-btn" onclick="goHome()">← Back to Home</button>
+            </div>
+            <div id="results-grid" class="movie-grid"></div>
+            <div id="pagination" class="pagination hidden"></div>
+        </div>
+    </section>
+
+    <!-- ─── MOVIE DETAIL MODAL ─── -->
+    <div id="movie-modal" class="modal hidden">
+        <div class="modal-overlay" onclick="closeModal()"></div>
+        <div class="modal-content" id="modal-content">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- ─── LOADING OVERLAY ─── -->
+    <div id="loading" class="loading hidden">
+        <div class="loader">
+            <div class="loader-ring"></div>
+            <div class="loader-ring delay"></div>
+            <span>Fetching from 4 APIs...</span>
+        </div>
+    </div>
+
+    <!-- ─── TOAST ─── -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- ─── FOOTER ─── -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <span class="logo-icon">🎬</span>
+                    <span class="logo-text">Cine<span class="accent">Scope</span></span>
+                    <p class="footer-desc">Your ultimate movie companion. Search, discover, and explore the world of cinema.</p>
+                </div>
+                <div class="footer-apis">
+                    <h4>Powered By</h4>
+                    <div class="api-badges">
+                        <span class="api-badge tmdb">TMDB</span>
+                        <span class="api-badge omdb">OMDB</span>
+                        <span class="api-badge watchmode">Watchmode</span>
+                        <span class="api-badge youtube">YouTube</span>
+                    </div>
+                </div>
+                <div class="footer-tech">
+                    <h4>Built With</h4>
+                    <div class="api-badges">
+                        <span class="api-badge python">Python</span>
+                        <span class="api-badge flask">Flask</span>
+                        <span class="api-badge js">JavaScript</span>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>Built with ❤️ &bull; Data by <a href="https://www.themoviedb.org/" target="_blank">TMDB</a>, <a href="http://www.omdbapi.com/" target="_blank">OMDB</a>, <a href="https://api.watchmode.com/" target="_blank">Watchmode</a>, <a href="https://developers.google.com/youtube" target="_blank">YouTube</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

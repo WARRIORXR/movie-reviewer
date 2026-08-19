@@ -283,6 +283,8 @@ async function openMovieDetail(movieId) {
     try {
         const movie = await apiFetch(`/api/movie/${movieId}`);
         renderMovieModal(movie);
+        // Lazy-load AI analysis after modal is visible
+        loadAiAnalysis(movieId);
     } catch (err) {
         showToast('Failed to load movie details');
         console.error(err);
@@ -526,6 +528,19 @@ function renderMovieModal(m) {
                 </div>
             </div>` : ''}
 
+            <!-- AI ANALYSIS (Gemini) -->
+            <div class="detail-section">
+                <h3 class="detail-section-title">🤖 AI Analysis <span class="ai-badge">Powered by Gemini</span></h3>
+                <div id="ai-analysis-container" class="ai-analysis-container">
+                    <div class="ai-loading">
+                        <div class="ai-loading-shimmer"></div>
+                        <div class="ai-loading-shimmer short"></div>
+                        <div class="ai-loading-shimmer"></div>
+                        <span class="ai-loading-text">✨ AI is analyzing this movie...</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- SIMILAR MOVIES -->
             ${m.similar?.length ? `
             <div class="detail-section">
@@ -590,4 +605,98 @@ function showToast(msg) {
     t.textContent = msg;
     t.classList.remove('hidden');
     setTimeout(() => t.classList.add('hidden'), 3500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  AI ANALYSIS (Gemini)
+// ═══════════════════════════════════════════════════════
+
+async function loadAiAnalysis(movieId) {
+    const container = document.getElementById('ai-analysis-container');
+    if (!container) return;
+
+    try {
+        const data = await apiFetch(`/api/ai-analysis/${movieId}`);
+        if (data.ai_analysis && !data.ai_analysis.error) {
+            renderAiAnalysis(container, data.ai_analysis);
+        } else {
+            container.innerHTML = `
+                <div class="ai-error">
+                    <span>⚠️</span> AI analysis is temporarily unavailable.
+                    ${data.ai_analysis?.error ? `<br><small>${esc(data.ai_analysis.error)}</small>` : ''}
+                </div>`;
+        }
+    } catch (err) {
+        console.error('AI analysis error:', err);
+        container.innerHTML = '<div class="ai-error"><span>⚠️</span> Could not load AI analysis.</div>';
+    }
+}
+
+function renderAiAnalysis(container, ai) {
+    container.innerHTML = `
+        <!-- Verdict + Score -->
+        <div class="ai-verdict-row">
+            <div class="ai-verdict-card">
+                <div class="ai-verdict-icon">🎯</div>
+                <div class="ai-verdict-text">
+                    <div class="ai-label">AI Verdict</div>
+                    <div class="ai-verdict">${esc(ai.verdict || '')}</div>
+                </div>
+            </div>
+            <div class="ai-score-card">
+                <div class="ai-score-ring" style="--score-pct: ${(parseFloat(ai.score) || 0) * 10}%">
+                    <span class="ai-score-value">${esc(String(ai.score || '?'))}</span>
+                    <span class="ai-score-label">/10</span>
+                </div>
+                <div class="ai-score-subtitle">AI Score</div>
+            </div>
+        </div>
+
+        <!-- One-liner -->
+        ${ai.one_liner ? `
+        <div class="ai-oneliner">
+            <span class="ai-oneliner-quote">"</span>${esc(ai.one_liner)}<span class="ai-oneliner-quote">"</span>
+        </div>` : ''}
+
+        <!-- Mood + Best For -->
+        <div class="ai-meta-row">
+            ${ai.mood ? `<div class="ai-meta-chip"><span class="ai-meta-icon">🎭</span><div><div class="ai-meta-label">Mood</div><div class="ai-meta-value">${esc(ai.mood)}</div></div></div>` : ''}
+            ${ai.best_for ? `<div class="ai-meta-chip"><span class="ai-meta-icon">👤</span><div><div class="ai-meta-label">Best For</div><div class="ai-meta-value">${esc(ai.best_for)}</div></div></div>` : ''}
+        </div>
+
+        <!-- Themes -->
+        ${ai.themes?.length ? `
+        <div class="ai-tags-section">
+            <div class="ai-label">🎨 Key Themes</div>
+            <div class="ai-tags">${ai.themes.map(t => `<span class="ai-tag">${esc(t)}</span>`).join('')}</div>
+        </div>` : ''}
+
+        <!-- Strengths + Weaknesses -->
+        <div class="ai-pros-cons">
+            ${ai.strengths?.length ? `
+            <div class="ai-pros">
+                <div class="ai-label">✅ Strengths</div>
+                <ul>${ai.strengths.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+            </div>` : ''}
+            ${ai.weaknesses?.length ? `
+            <div class="ai-cons">
+                <div class="ai-label">⚠️ Weaknesses</div>
+                <ul>${ai.weaknesses.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+            </div>` : ''}
+        </div>
+
+        <!-- Fun Facts -->
+        ${ai.fun_facts?.length ? `
+        <div class="ai-facts">
+            <div class="ai-label">💡 Fun Facts</div>
+            ${ai.fun_facts.map(f => `<div class="ai-fact-item"><span class="ai-fact-dot">•</span>${esc(f)}</div>`).join('')}
+        </div>` : ''}
+
+        <!-- AI Similar Picks -->
+        ${ai.similar_picks?.length ? `
+        <div class="ai-picks">
+            <div class="ai-label">🎬 AI Recommends</div>
+            <div class="ai-picks-list">${ai.similar_picks.map(p => `<span class="ai-pick-chip">${esc(p)}</span>`).join('')}</div>
+        </div>` : ''}
+    `;
 }

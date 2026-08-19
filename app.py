@@ -2,13 +2,15 @@
 CineScope — Movie Reviewer & Explorer
 Python Flask Backend Server
 
-Aggregates data from 4 APIs:
-  • OMDB  — Ratings (IMDB, Rotten Tomatoes, Metacritic), Awards, Plot
-  • TMDB  — Posters, Cast, Crew, Budget, Revenue, Reviews, Similar, Genres
+Aggregates data from 5 APIs:
+  • OMDB    — Ratings (IMDB, Rotten Tomatoes, Metacritic), Awards, Plot
+  • TMDB    — Posters, Cast, Crew, Budget, Revenue, Reviews, Similar, Genres
   • Watchmode — Streaming availability
   • YouTube — Official trailers
+  • Gemini  — AI-powered movie analysis, insights & recommendations
 """
 
+import json
 import logging
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -18,6 +20,7 @@ from config import (
     TMDB_API_KEY, TMDB_BASE_URL, TMDB_IMG_BASE,
     WATCHMODE_API_KEY, WATCHMODE_BASE_URL,
     YOUTUBE_API_KEY, YOUTUBE_BASE_URL,
+    GEMINI_API_KEY, GEMINI_BASE_URL, GEMINI_MODEL,
 )
 
 # ── App setup ───────────────────────────────────────────────
@@ -106,13 +109,13 @@ def now_playing():
 
 
 # ═══════════════════════════════════════════════════════════
-#  FULL MOVIE DETAIL (aggregates ALL 4 APIs)
+#  FULL MOVIE DETAIL (aggregates ALL 5 APIs)
 # ═══════════════════════════════════════════════════════════
 
 @app.route("/api/movie/<int:movie_id>")
 def movie_detail(movie_id):
     """
-    Aggregates data from TMDB, OMDB, Watchmode, and YouTube
+    Aggregates data from TMDB, OMDB, Watchmode, YouTube, and Gemini
     into a single comprehensive response.
     """
     # ── 1. TMDB: core details ──────────────────────────────
@@ -225,6 +228,27 @@ def movie_detail(movie_id):
     }
 
     return jsonify(result)
+
+
+# ═══════════════════════════════════════════════════════════
+#  AI ANALYSIS ENDPOINT (lazy-loaded separately)
+# ═══════════════════════════════════════════════════════════
+
+@app.route("/api/ai-analysis/<int:movie_id>")
+def ai_analysis(movie_id):
+    """
+    Generates AI-powered movie analysis via Gemini.
+    Called separately to avoid blocking the main detail load.
+    """
+    # Get basic movie info for context
+    movie = tmdb_get(f"/movie/{movie_id}")
+    if not movie or "id" not in movie:
+        return jsonify({"error": "Movie not found"}), 404
+
+    omdb_data = fetch_omdb_data(movie.get("imdb_id") or movie.get("title", ""))
+
+    analysis = fetch_gemini_analysis(movie, omdb_data)
+    return jsonify({"ai_analysis": analysis})
 
 
 # ═══════════════════════════════════════════════════════════
@@ -429,6 +453,97 @@ def build_ratings(movie, omdb_data):
             })
 
     return ratings
+
+
+# ═══════════════════════════════════════════════════════════
+#  GEMINI AI INTEGRATION
+# ═══════════════════════════════════════════════════════════
+
+def fetch_gemini_analysis(movie, omdb_data):
+    """Generate AI-powered movie analysis using Google Gemini."""
+    title = movie.get("title", "Unknown")
+    year = (movie.get("release_date") or "")[:4]
+    overview = movie.get("overview", "")
+    genres = ", ".join(g.get("name", "") for g in movie.get("genres", []))
+    rating = movie.get("vote_average", "N/A")
+    budget = movie.get("budget", 0)
+    revenue = movie.get("revenue", 0)
+    awards = omdb_data.get("awards", "N/A") if omdb_data else "N/A"
+    director = omdb_data.get("director", "Unknown") if omdb_data else "Unknown"
+    actors = omdb_data.get("actors", "Unknown") if omdb_data else "Unknown"
+
+    prompt = f"""You are a world-class film critic and movie expert. Analyze the following movie and respond ONLY with a valid JSON object (no markdown, no code fences, just raw JSON).
+
+Movie: {title} ({year})
+Genres: {genres}
+Director: {director}
+Cast: {actors}
+Plot: {overview}
+Rating: {rating}/10
+Budget: ${budget:,} | Revenue: ${revenue:,}
+Awards: {awards}
+
+Respond with this exact JSON structure:
+{{
+    "verdict": "A punchy 1-2 sentence verdict — should you watch it?",
+    "score": "Your AI rating out of 10 (number only, like 8.5)",
+    "themes": ["theme1", "theme2", "theme3"],
+    "strengths": ["strength1", "strength2", "strength3"],
+    "weaknesses": ["weakness1", "weakness2"],
+    "mood": "The overall mood/vibe in 2-3 words",
+    "best_for": "Who would enjoy this most (e.g., 'Sci-fi fans who love mind-bending plots')",
+    "fun_facts": ["An interesting fact about this movie", "Another fun fact"],
+    "similar_picks": ["Similar Movie 1", "Similar Movie 2", "Similar Movie 3"],
+    "one_liner": "A witty one-liner review in under 15 words"
+}}"""
+
+    try:
+        url = f"{GEMINI_BASE_URL}/models/{GEMINI_MODEL}:generateContent"
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 800,
+            }
+        }
+
+        r = requests.post(
+            url,
+            params={"key": GEMINI_API_KEY},
+            json=payload,
+            timeout=15
+        )
+        r.raise_for_status()
+        data = r.json()
+
+        # Extract text from Gemini response
+        text = (
+            data.get("candidates", [{}])[0]
+            .get("content", {})
+            .get("parts", [{}])[0]
+            .get("text", "")
+        )
+
+        # Clean up: strip markdown fences if present
+        text = text.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1]  # Remove first line
+        if text.endswith("```"):
+            text = text.rsplit("```", 1)[0]
+        text = text.strip()
+
+        # Parse JSON
+        analysis = json.loads(text)
+        return analysis
+
+    except json.JSONDecodeError as e:
+        logger.warning(f"Gemini JSON parse error: {e}")
+        return {"error": "AI analysis format error", "raw": text[:500] if 'text' in dir() else ""}
+    except Exception as e:
+        logger.warning(f"Gemini API error: {e}")
+        return {"error": f"AI analysis unavailable: {str(e)}"}
 
 
 # ═══════════════════════════════════════════════════════════

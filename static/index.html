@@ -3,160 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineScope — Movie Reviewer & Explorer</title>
-    <meta name="description" content="Search any movie and discover detailed reviews, budget, box office collection, where to watch, cast, and more. Your ultimate movie companion powered by TMDB, OMDB, Watchmode & YouTube.">
+    <title>CineScope — Movie Reviewer & Explorer | Gemini AI</title>
+    <meta name="description" content="Discover everything about any movie — AI Critical Analysis, Ratings from IMDb & Rotten Tomatoes, Box Office & Budget, Streaming platforms, Cast & Crew powered 100% by Google Gemini AI.">
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- ─── NAVBAR ─── -->
+    <!-- ═══════════════════════════════════════════════════════
+         NAVBAR
+         ═══════════════════════════════════════════════════════ -->
     <nav class="navbar" id="navbar">
-        <a href="#" class="logo" onclick="goHome(); return false;">
+        <div class="nav-brand" onclick="goHome()">
             <span class="logo-icon">🎬</span>
-            <span class="logo-text">Cine<span class="accent">Scope</span></span>
-        </a>
+            <span class="logo-text">Cine<span class="gradient-text">Scope</span></span>
+            <span class="nav-badge">AI</span>
+        </div>
+
         <div class="nav-center">
-            <div class="nav-search-wrapper" id="nav-search-wrapper">
+            <div class="nav-search-wrapper">
                 <span class="nav-search-icon">🔍</span>
                 <input type="text" id="nav-search-input" placeholder="Quick search..." autocomplete="off">
-                <div id="nav-suggestions" class="nav-suggestions hidden"></div>
+                <div class="suggestions-dropdown hidden" id="nav-suggestions"></div>
             </div>
         </div>
+
         <div class="nav-links">
-            <a href="#" onclick="showCategory('trending'); return false;">Trending</a>
-            <a href="#" onclick="showCategory('top-rated'); return false;">Top Rated</a>
-            <a href="#" onclick="showCategory('upcoming'); return false;">Upcoming</a>
-            <a href="#" onclick="showCategory('now-playing'); return false;">Now Playing</a>
+            <a href="#trending" onclick="showCategory('trending')">TRENDING</a>
+            <a href="#top-rated" onclick="showCategory('top-rated')">TOP RATED</a>
+            <a href="#upcoming" onclick="showCategory('upcoming')">UPCOMING</a>
+            <a href="#now-playing" onclick="showCategory('now-playing')">NOW PLAYING</a>
         </div>
     </nav>
 
-    <!-- ─── HERO ─── -->
-    <header id="hero">
+    <!-- ═══════════════════════════════════════════════════════
+         HERO SECTION
+         ═══════════════════════════════════════════════════════ -->
+    <header class="hero" id="hero">
         <div class="hero-particles" id="hero-particles"></div>
         <div class="hero-bg-overlay"></div>
         <div class="hero-content">
-            <div class="hero-badge">🔥 Powered by 5 APIs — TMDB · OMDB · Watchmode · YouTube · Gemini AI</div>
+            <div class="hero-badge">✨ 100% Powered by Google Gemini AI</div>
             <h1 class="hero-title">
                 Discover <span class="gradient-text">Every Detail</span><br>
                 About Any Movie
             </h1>
             <p class="hero-subtitle">
-                Ratings from IMDb, Rotten Tomatoes & Metacritic &bull; Budget & Box Office &bull;
-                Where to Stream &bull; Trailers &bull; Cast & Crew
+                AI Critical Insights &bull; IMDb & Rotten Tomatoes Ratings &bull; Budget & Box Office &bull; Where to Stream &bull; Cast & Crew
             </p>
-            <div class="search-container" id="hero-search">
+
+            <!-- Search bar -->
+            <div class="search-container">
                 <div class="search-wrapper">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="search-input" placeholder="Search for a movie..." autocomplete="off">
-                    <button id="search-btn" onclick="searchMovies()">
-                        <span>Search</span>
-                        <span class="btn-arrow">→</span>
-                    </button>
+                    <input type="text" id="search-input" placeholder="Search for any movie (e.g. Inception, Oppenheimer, Interstellar)..." autocomplete="off">
+                    <button id="search-btn" onclick="searchMovies()">Search →</button>
                 </div>
-                <div id="search-suggestions" class="search-suggestions hidden"></div>
+                <div class="suggestions-dropdown hidden" id="search-suggestions"></div>
             </div>
+
+            <!-- Stats counter -->
             <div class="hero-stats">
-                <div class="stat-item"><span class="stat-value" id="stat-movies">900K+</span><span class="stat-label">Movies</span></div>
+                <div class="stat-item"><span class="stat-value" id="stat-movies">Infinite</span><span class="stat-label">AI Movie Knowledge</span></div>
                 <div class="stat-divider"></div>
-                <div class="stat-item"><span class="stat-value">5</span><span class="stat-label">Data Sources</span></div>
+                <div class="stat-item"><span class="stat-value">Gemini AI</span><span class="stat-label">Intelligence Engine</span></div>
                 <div class="stat-divider"></div>
-                <div class="stat-item"><span class="stat-value">200+</span><span class="stat-label">Streaming Services</span></div>
+                <div class="stat-item"><span class="stat-value">200+</span><span class="stat-label">Streaming Services Tracked</span></div>
             </div>
         </div>
+
         <div class="scroll-indicator" id="scroll-indicator">
-            <span>Scroll to explore</span>
+            <span>SCROLL TO EXPLORE</span>
             <div class="scroll-arrow">↓</div>
         </div>
     </header>
 
-    <!-- ─── TRENDING SECTION ─── -->
-    <section id="trending-section" class="section">
-        <div class="container">
-            <div class="section-header-flex">
-                <h2 class="section-title"><span class="title-icon">🔥</span> Trending This Week</h2>
-                <button class="see-all-btn" onclick="showCategory('trending')">See All →</button>
-            </div>
-            <div id="trending-grid" class="movie-scroll"></div>
-        </div>
-    </section>
+    <!-- ═══════════════════════════════════════════════════════
+         MAIN CONTENT
+         ═══════════════════════════════════════════════════════ -->
+    <main class="main-content" id="main-content">
 
-    <!-- ─── NOW PLAYING SECTION ─── -->
-    <section id="now-playing-section" class="section">
-        <div class="container">
-            <div class="section-header-flex">
-                <h2 class="section-title"><span class="title-icon">🎬</span> Now Playing in Theaters</h2>
-                <button class="see-all-btn" onclick="showCategory('now-playing')">See All →</button>
-            </div>
-            <div id="now-playing-grid" class="movie-scroll"></div>
-        </div>
-    </section>
-
-    <!-- ─── RESULTS SECTION ─── -->
-    <section id="results-section" class="section hidden">
-        <div class="container">
+        <!-- SEARCH RESULTS / CATEGORY VIEW -->
+        <section class="results-section hidden" id="results-section">
             <div class="section-header">
-                <h2 id="results-title">Search Results</h2>
-                <button class="back-btn" onclick="goHome()">← Back to Home</button>
+                <h2 class="section-title" id="results-title">Search Results</h2>
+                <button class="btn-secondary" onclick="goHome()">← Back to Home</button>
             </div>
-            <div id="results-grid" class="movie-grid"></div>
-            <div id="pagination" class="pagination hidden"></div>
-        </div>
-    </section>
+            <div class="movie-grid" id="results-grid"></div>
+            <div class="pagination hidden" id="pagination"></div>
+        </section>
 
-    <!-- ─── MOVIE DETAIL MODAL ─── -->
-    <div id="movie-modal" class="modal hidden">
-        <div class="modal-overlay" onclick="closeModal()"></div>
-        <div class="modal-content" id="modal-content">
-            <button class="modal-close" onclick="closeModal()">✕</button>
-            <div id="modal-body"></div>
+        <!-- TRENDING THIS WEEK -->
+        <section class="movie-section" id="trending-section">
+            <div class="section-header-flex">
+                <div>
+                    <h2 class="section-title">🔥 Trending Blockbusters</h2>
+                    <p class="section-subtitle">What audiences around the globe are watching</p>
+                </div>
+                <button class="view-all-btn" onclick="showCategory('trending')">View All →</button>
+            </div>
+            <div class="movie-scroll" id="trending-grid"></div>
+        </section>
+
+        <!-- NOW PLAYING -->
+        <section class="movie-section" id="now-playing-section">
+            <div class="section-header-flex">
+                <div>
+                    <h2 class="section-title">🍿 Now Playing & Recent Releases</h2>
+                    <p class="section-subtitle">Fresh in theaters and on streaming</p>
+                </div>
+                <button class="view-all-btn" onclick="showCategory('now-playing')">View All →</button>
+            </div>
+            <div class="movie-scroll" id="now-playing-grid"></div>
+        </section>
+
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════════
+         MOVIE DETAIL MODAL
+         ═══════════════════════════════════════════════════════ -->
+    <div class="movie-modal hidden" id="movie-modal">
+        <div class="modal-backdrop" onclick="closeModal()"></div>
+        <div class="modal-container">
+            <button class="modal-close" onclick="closeModal()" title="Close (ESC)">✕</button>
+            <div class="modal-body" id="modal-body">
+                <!-- Dynamically populated -->
+            </div>
         </div>
     </div>
 
-    <!-- ─── LOADING OVERLAY ─── -->
-    <div id="loading" class="loading hidden">
+    <!-- ═══════════════════════════════════════════════════════
+         LOADING & TOAST
+         ═══════════════════════════════════════════════════════ -->
+    <div class="loading hidden" id="loading">
         <div class="loader">
             <div class="loader-ring"></div>
             <div class="loader-ring delay"></div>
-            <span>Fetching from 4 APIs...</span>
+            <p>✨ Consulting Gemini AI...</p>
         </div>
     </div>
 
-    <!-- ─── TOAST ─── -->
-    <div id="toast" class="toast hidden"></div>
+    <div class="toast hidden" id="toast"></div>
 
-    <!-- ─── FOOTER ─── -->
+    <!-- ═══════════════════════════════════════════════════════
+         FOOTER
+         ═══════════════════════════════════════════════════════ -->
     <footer class="footer">
-        <div class="container">
+        <div class="footer-container">
             <div class="footer-grid">
                 <div class="footer-brand">
                     <span class="logo-icon">🎬</span>
-                    <span class="logo-text">Cine<span class="accent">Scope</span></span>
-                    <p class="footer-desc">Your ultimate movie companion. Search, discover, and explore the world of cinema.</p>
+                    <span class="logo-text">Cine<span class="gradient-text">Scope</span></span>
+                    <p class="footer-desc">The next-generation movie reviewer & intelligence platform powered entirely by Google Gemini AI.</p>
                 </div>
                 <div class="footer-apis">
-                    <h4>Powered By</h4>
+                    <h4>Core Technology</h4>
                     <div class="api-badges">
-                        <span class="api-badge tmdb">TMDB</span>
-                        <span class="api-badge omdb">OMDB</span>
-                        <span class="api-badge watchmode">Watchmode</span>
-                        <span class="api-badge youtube">YouTube</span>
-                        <span class="api-badge gemini">Gemini AI</span>
+                        <span class="api-badge gemini">Google Gemini AI</span>
+                        <span class="api-badge python">Python Flask</span>
+                        <span class="api-badge js">Vanilla JavaScript</span>
                     </div>
                 </div>
                 <div class="footer-tech">
-                    <h4>Built With</h4>
-                    <div class="api-badges">
-                        <span class="api-badge python">Python</span>
-                        <span class="api-badge flask">Flask</span>
-                        <span class="api-badge js">JavaScript</span>
-                    </div>
+                    <h4>Quick Links</h4>
+                    <ul class="footer-links">
+                        <li><a href="javascript:void(0)" onclick="showCategory('trending')">Trending</a></li>
+                        <li><a href="javascript:void(0)" onclick="showCategory('top-rated')">Top Rated</a></li>
+                        <li><a href="javascript:void(0)" onclick="showCategory('upcoming')">Upcoming</a></li>
+                    </ul>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>Built with ❤️ &bull; Data by <a href="https://www.themoviedb.org/" target="_blank">TMDB</a>, <a href="http://www.omdbapi.com/" target="_blank">OMDB</a>, <a href="https://api.watchmode.com/" target="_blank">Watchmode</a>, <a href="https://developers.google.com/youtube" target="_blank">YouTube</a>, <a href="https://ai.google.dev/" target="_blank">Gemini AI</a></p>
+                <p>Built with ❤️ &bull; Powered by <a href="https://ai.google.dev/" target="_blank">Google Gemini AI</a></p>
             </div>
         </div>
     </footer>

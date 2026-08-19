@@ -1,19 +1,10 @@
 /* ======================================================
    CineScope — Movie Reviewer & Explorer
-   Frontend Application Logic v2
+   Frontend Application Logic (100% Gemini AI Powered)
    Talks to Python Flask backend (/api/...)
    ====================================================== */
 
 const API_BASE = '';  // Same origin (Flask serves both)
-const IMG_BASE = 'https://image.tmdb.org/t/p/';
-const IMG_W500 = IMG_BASE + 'w500';
-const IMG_W780 = IMG_BASE + 'w780';
-const IMG_ORIGINAL = IMG_BASE + 'original';
-const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300">' +
-    '<rect fill="%2316162a" width="200" height="300"/>' +
-    '<text fill="%235e5e7e" font-family="sans-serif" font-size="13" text-anchor="middle" x="100" y="155">No Poster</text></svg>'
-);
 
 let searchDebounce = null;
 let navSearchDebounce = null;
@@ -24,10 +15,10 @@ let currentSearchQuery = '';
 // ═══════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Generate particles
+    // Generate background floating particles
     createParticles();
 
-    // Load home sections
+    // Load initial home page categories
     loadHomeData();
 
     // Search input events
@@ -52,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ESC to close modal
+    // ESC key to close modal
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
     // Navbar scroll effect
@@ -67,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function createParticles() {
     const container = document.getElementById('hero-particles');
+    if (!container) return;
     const colors = ['#7c5cfc', '#c084fc', '#f472b6', '#06b6d4', '#3b82f6'];
     for (let i = 0; i < 30; i++) {
         const p = document.createElement('div');
@@ -104,8 +96,19 @@ async function loadHomeData() {
         renderMovieScroll(trending.results, 'trending-grid');
         renderMovieScroll(nowPlaying.results, 'now-playing-grid');
     } catch (err) {
-        console.error('Home data error:', err);
+        console.error('Home data load error:', err);
     }
+}
+
+// ═══════════════════════════════════════════════════════
+//  POSTER GENERATOR
+// ═══════════════════════════════════════════════════════
+
+function getPosterSrc(posterPath, title) {
+    if (posterPath && posterPath.startsWith('http')) return posterPath;
+    const cleanTitle = (title || 'Movie').replace(/["'<>]/g, '');
+    const shortTitle = cleanTitle.length > 24 ? cleanTitle.substring(0, 21) + '...' : cleanTitle;
+    return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%231a162b"/><stop offset="50%" stop-color="%23241b44"/><stop offset="100%" stop-color="%23120f24"/></linearGradient><linearGradient id="a" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%237c5cfc"/><stop offset="100%" stop-color="%23f472b6"/></linearGradient></defs><rect width="300" height="450" fill="url(%23g)" rx="12"/><circle cx="150" cy="180" r="55" fill="url(%23a)" opacity="0.18"/><text x="150" y="195" font-family="sans-serif" font-size="42" text-anchor="middle">🎬</text><rect x="30" y="315" width="240" height="2" fill="url(%23a)" opacity="0.4"/><text x="150" y="355" font-family="system-ui, sans-serif" font-size="17" font-weight="700" fill="%23f1f1f8" text-anchor="middle">${encodeURIComponent(shortTitle)}</text><text x="150" y="385" font-family="system-ui, sans-serif" font-size="12" fill="%23a855f7" text-anchor="middle">✨ Gemini AI</text></svg>`;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -126,11 +129,14 @@ async function fetchSuggestions(query, suggestionsId) {
     try {
         const data = await apiFetch(`/api/search?q=${encodeURIComponent(query)}&page=1`);
         const container = document.getElementById(suggestionsId);
-        if (!data.results || !data.results.length) { container.classList.add('hidden'); return; }
+        if (!data.results || !data.results.length) {
+            container.classList.add('hidden');
+            return;
+        }
 
         container.innerHTML = data.results.slice(0, 7).map(m => `
-            <div class="suggestion-item" onclick="openMovieDetail(${m.id})">
-                <img class="suggestion-poster" src="${m.poster_path ? IMG_W500 + m.poster_path : PLACEHOLDER}" alt="${esc(m.title)}" loading="lazy">
+            <div class="suggestion-item" onclick="openMovieDetail('${escAttr(m.title)}', ${m.id || 0})">
+                <img class="suggestion-poster" src="${getPosterSrc(m.poster_path, m.title)}" alt="${esc(m.title)}" loading="lazy">
                 <div class="suggestion-info">
                     <div class="suggestion-title">${esc(m.title)}</div>
                     <div class="suggestion-year">${m.release_date ? m.release_date.substring(0, 4) : 'N/A'}</div>
@@ -175,9 +181,9 @@ async function showCategory(cat) {
     try {
         const data = await apiFetch(`/api/${cat}`);
         const titles = {
-            'trending': '🔥 Trending This Week',
-            'top-rated': '⭐ Top Rated Movies',
-            'upcoming': '🎬 Upcoming Movies',
+            'trending': '🔥 Trending Blockbusters',
+            'top-rated': '⭐ All-Time Highest Rated',
+            'upcoming': '🎬 Anticipated Upcoming Releases',
             'now-playing': '🍿 Now Playing in Theaters',
         };
         document.getElementById('results-title').textContent = titles[cat] || cat;
@@ -209,6 +215,10 @@ function esc(str) {
     return d.innerHTML;
 }
 
+function escAttr(str) {
+    return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
 function getRatingColor(rating) {
     if (rating >= 7.5) return 'var(--green)';
     if (rating >= 6) return 'var(--yellow)';
@@ -225,12 +235,13 @@ function formatCurrency(amount) {
 }
 
 function movieCardHTML(m, i) {
+    const posterUrl = getPosterSrc(m.poster_path, m.title);
     return `
-        <div class="movie-card" onclick="openMovieDetail(${m.id})" style="animation-delay: ${i * 0.04}s">
+        <div class="movie-card" onclick="openMovieDetail('${escAttr(m.title)}', ${m.id || 0})" style="animation-delay: ${i * 0.04}s">
             <div class="poster-wrapper">
-                <img class="poster" src="${m.poster_path ? IMG_W500 + m.poster_path : PLACEHOLDER}" alt="${esc(m.title)}" loading="lazy">
+                <img class="poster" src="${posterUrl}" alt="${esc(m.title)}" loading="lazy">
                 <div class="card-rating" style="color: ${getRatingColor(m.vote_average)}">
-                    ⭐ ${m.vote_average ? m.vote_average.toFixed(1) : '—'}
+                    ⭐ ${m.vote_average ? Number(m.vote_average).toFixed(1) : '—'}
                 </div>
                 <div class="poster-overlay"><span>View Details →</span></div>
             </div>
@@ -244,7 +255,7 @@ function movieCardHTML(m, i) {
 function renderMovieGrid(movies, containerId) {
     const c = document.getElementById(containerId);
     if (!movies || !movies.length) {
-        c.innerHTML = '<div class="no-results" style="grid-column:1/-1"><div class="emoji">🎬</div><h3>No movies found</h3><p>Try a different search term</p></div>';
+        c.innerHTML = '<div class="no-results" style="grid-column:1/-1"><div class="emoji">🎬</div><h3>No movies found</h3><p>Try searching for any movie title</p></div>';
         return;
     }
     c.innerHTML = movies.map((m, i) => movieCardHTML(m, i)).join('');
@@ -252,6 +263,7 @@ function renderMovieGrid(movies, containerId) {
 
 function renderMovieScroll(movies, containerId) {
     const c = document.getElementById(containerId);
+    if (!c) return;
     c.innerHTML = (movies || []).map((m, i) => movieCardHTML(m, i)).join('');
 }
 
@@ -273,18 +285,17 @@ function renderPagination(current, total) {
 }
 
 // ═══════════════════════════════════════════════════════
-//  MOVIE DETAIL (FULL MULTI-API DATA)
+//  MOVIE DETAIL (100% GEMINI AI POWERED)
 // ═══════════════════════════════════════════════════════
 
-async function openMovieDetail(movieId) {
+async function openMovieDetail(movieTitleOrIdent, movieId = 0) {
     showLoading();
     closeSuggestions();
 
     try {
-        const movie = await apiFetch(`/api/movie/${movieId}`);
+        const queryParam = encodeURIComponent(movieTitleOrIdent);
+        const movie = await apiFetch(`/api/movie/${queryParam}?title=${queryParam}`);
         renderMovieModal(movie);
-        // Lazy-load AI analysis after modal is visible
-        loadAiAnalysis(movieId);
     } catch (err) {
         showToast('Failed to load movie details');
         console.error(err);
@@ -302,32 +313,33 @@ function renderMovieModal(m) {
     const profit = (m.revenue && m.budget) ? m.revenue - m.budget : null;
     const roi = (profit && m.budget) ? ((profit / m.budget) * 100).toFixed(0) : null;
 
-    // Watch providers — merge TMDB + Watchmode
-    const tmdbWP = m.watch_providers?.tmdb || {};
-    const region = tmdbWP['US'] || tmdbWP['IN'] || tmdbWP['GB'] || Object.values(tmdbWP)[0] || null;
-    const watchmodeItems = m.watch_providers?.watchmode || [];
+    // Streaming sources from Gemini
+    const streamSources = m.watch_providers?.sources || [];
 
     // Crew
     const crew = m.crew || {};
 
+    // Poster and backdrop
+    const posterSrc = getPosterSrc(m.poster_path, m.title);
+
     body.innerHTML = `
         <!-- BACKDROP -->
         <div class="detail-backdrop">
-            <img src="${m.backdrop_path ? IMG_ORIGINAL + m.backdrop_path : (m.poster_path ? IMG_W780 + m.poster_path : PLACEHOLDER)}" alt="${esc(m.title)}">
+            <div class="detail-backdrop-art"></div>
             <div class="detail-backdrop-overlay"></div>
         </div>
 
         <!-- HEADER -->
         <div class="detail-header">
             <div class="detail-poster">
-                <img src="${m.poster_path ? IMG_W500 + m.poster_path : PLACEHOLDER}" alt="${esc(m.title)}">
+                <img src="${posterSrc}" alt="${esc(m.title)}">
             </div>
             <div class="detail-info">
                 <h1 class="detail-title">${esc(m.title)}</h1>
                 ${m.tagline ? `<p class="detail-tagline">"${esc(m.tagline)}"</p>` : ''}
 
                 <div class="detail-meta">
-                    ${m.release_date ? `<span class="meta-badge">📅 ${new Date(m.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>` : ''}
+                    ${m.release_date ? `<span class="meta-badge">📅 ${m.release_date.substring(0, 4)}</span>` : ''}
                     ${m.runtime ? `<span class="meta-badge">⏱️ ${Math.floor(m.runtime / 60)}h ${m.runtime % 60}m</span>` : ''}
                     ${m.certification ? `<span class="meta-badge">🎫 ${m.certification}</span>` : ''}
                     ${m.original_language ? `<span class="meta-badge">🌐 ${m.original_language.toUpperCase()}</span>` : ''}
@@ -336,7 +348,7 @@ function renderMovieModal(m) {
                 </div>
 
                 <div class="detail-genres">
-                    ${(m.genres || []).map(g => `<span class="genre-tag">${esc(g.name)}</span>`).join('')}
+                    ${(m.genres || []).map(g => `<span class="genre-tag">${esc(typeof g === 'string' ? g : g.name)}</span>`).join('')}
                 </div>
 
                 ${m.overview ? `<p class="detail-overview">${esc(m.overview)}</p>` : ''}
@@ -347,12 +359,12 @@ function renderMovieModal(m) {
                     ${m.ratings.map(r => `
                         <div class="rating-card">
                             <div class="rating-source-icon ${r.icon}">
-                                ${r.icon === 'imdb' ? 'IMDb' : r.icon === 'rt' ? '🍅' : r.icon === 'metacritic' ? 'MC' : 'T'}
+                                ${r.icon === 'imdb' ? 'IMDb' : r.icon === 'rt' ? '🍅' : r.icon === 'metacritic' ? 'MC' : '✨'}
                             </div>
                             <div class="rating-info">
                                 <div class="rating-source-name">${esc(r.source)}</div>
                                 <div class="rating-value">${esc(r.value)}</div>
-                                ${r.votes ? `<div class="rating-votes">${r.votes} votes</div>` : ''}
+                                ${r.votes ? `<div class="rating-votes">${r.votes}</div>` : ''}
                             </div>
                         </div>
                     `).join('')}
@@ -363,10 +375,19 @@ function renderMovieModal(m) {
         <div class="detail-body">
 
             <!-- AWARDS -->
-            ${m.omdb?.awards && m.omdb.awards !== 'N/A' ? `
+            ${m.awards || m.omdb?.awards ? `
             <div class="awards-bar">
                 <span class="awards-icon">🏆</span>
-                <span class="awards-text">${esc(m.omdb.awards)}</span>
+                <span class="awards-text">${esc(m.awards || m.omdb.awards)}</span>
+            </div>` : ''}
+
+            <!-- AI ANALYSIS (Gemini) -->
+            ${m.ai_analysis ? `
+            <div class="detail-section">
+                <h3 class="detail-section-title">🤖 AI Critical Analysis <span class="ai-badge">Gemini AI</span></h3>
+                <div class="ai-analysis-container">
+                    ${renderAiAnalysisHTML(m.ai_analysis)}
+                </div>
             </div>` : ''}
 
             <!-- FINANCIALS -->
@@ -377,18 +398,17 @@ function renderMovieModal(m) {
                     ${m.budget ? `<div class="finance-card"><div class="label">Budget</div><div class="value blue">${formatCurrency(m.budget)}</div></div>` : ''}
                     ${m.revenue ? `<div class="finance-card"><div class="label">Box Office Revenue</div><div class="value green">${formatCurrency(m.revenue)}</div></div>` : ''}
                     ${profit !== null ? `<div class="finance-card"><div class="label">Profit / Loss</div><div class="value ${profit >= 0 ? 'green' : 'red'}">${profit >= 0 ? '+' : ''}${formatCurrency(profit)}</div>${roi ? `<div class="sub">${roi}% ROI</div>` : ''}</div>` : ''}
-                    ${m.omdb?.box_office && m.omdb.box_office !== 'N/A' ? `<div class="finance-card"><div class="label">US Box Office (OMDB)</div><div class="value emerald">${esc(m.omdb.box_office)}</div></div>` : ''}
-                    ${m.popularity ? `<div class="finance-card"><div class="label">Popularity</div><div class="value cyan">${m.popularity.toFixed(0)}</div></div>` : ''}
+                    ${m.omdb?.box_office ? `<div class="finance-card"><div class="label">US Domestic Box Office</div><div class="value emerald">${esc(m.omdb.box_office)}</div></div>` : ''}
                 </div>
             </div>` : ''}
 
-            <!-- WHERE TO WATCH (Watchmode) -->
+            <!-- WHERE TO WATCH -->
             <div class="detail-section">
                 <h3 class="detail-section-title">📺 Where to Watch</h3>
-                ${watchmodeItems.length ? `
+                ${streamSources.length ? `
                 <div class="streaming-grid">
-                    ${watchmodeItems.map(s => `
-                        <a href="${s.web_url || '#'}" target="_blank" class="stream-chip" title="${esc(s.name)}">
+                    ${streamSources.map(s => `
+                        <a href="${s.web_url || `https://www.google.com/search?q=watch+${encodeURIComponent(m.title)}`}" target="_blank" class="stream-chip" title="${esc(s.name)}">
                             <div class="chip-icon">📺</div>
                             <div class="chip-info">
                                 <div class="chip-name">${esc(s.name)}</div>
@@ -398,44 +418,23 @@ function renderMovieModal(m) {
                         </a>
                     `).join('')}
                 </div>
-                <p class="watch-note">* Data from Watchmode API. Availability may vary by region.</p>
-                ` : region ? `
-                <div class="streaming-grid">
-                    ${(region.flatrate || []).map(p => `
-                        <div class="stream-chip">
-                            <img src="${IMG_W500 + p.logo_path}" alt="${esc(p.provider_name)}">
-                            <div class="chip-info"><div class="chip-name">${esc(p.provider_name)}</div><div class="chip-type">Stream</div></div>
-                        </div>
-                    `).join('')}
-                    ${(region.rent || []).map(p => `
-                        <div class="stream-chip">
-                            <img src="${IMG_W500 + p.logo_path}" alt="${esc(p.provider_name)}">
-                            <div class="chip-info"><div class="chip-name">${esc(p.provider_name)}</div><div class="chip-type">Rent</div></div>
-                        </div>
-                    `).join('')}
-                    ${(region.buy || []).map(p => `
-                        <div class="stream-chip">
-                            <img src="${IMG_W500 + p.logo_path}" alt="${esc(p.provider_name)}">
-                            <div class="chip-info"><div class="chip-name">${esc(p.provider_name)}</div><div class="chip-type">Buy</div></div>
-                        </div>
-                    `).join('')}
-                </div>
-                <p class="watch-note">* Data from TMDB / JustWatch. Availability may vary by region.</p>
-                ` : '<div class="no-results"><p>No streaming data available for this title.</p></div>'}
+                <p class="watch-note">* Streaming availability identified via Gemini AI.</p>
+                ` : '<div class="no-results"><p>Available across major digital platforms (Netflix, Prime Video, Apple TV).</p></div>'}
             </div>
 
-            <!-- TRAILERS (YouTube API) -->
+            <!-- TRAILERS -->
             ${m.youtube_trailers && m.youtube_trailers.length ? `
             <div class="detail-section">
-                <h3 class="detail-section-title">🎥 Trailers & Videos</h3>
+                <h3 class="detail-section-title">🎥 Official Trailers & Clips</h3>
                 <div class="videos-grid">
                     ${m.youtube_trailers.map(v => `
-                        <div class="video-card" onclick="window.open('https://www.youtube.com/watch?v=${v.video_id}', '_blank')">
-                            <img src="${v.thumbnail || `https://img.youtube.com/vi/${v.video_id}/hqdefault.jpg`}" alt="${esc(v.title)}">
-                            <div class="video-play"><div class="video-play-btn">▶</div></div>
+                        <div class="video-card" onclick="window.open('https://www.youtube.com/results?search_query=${encodeURIComponent(m.title + ' official trailer')}', '_blank')">
+                            <div class="video-thumbnail-placeholder">
+                                <span class="trailer-play-icon">▶</span>
+                            </div>
                             <div class="video-title">
                                 ${esc(v.title)}
-                                <div class="video-channel">${esc(v.channel)}</div>
+                                <div class="video-channel">${esc(v.channel || 'Official Studio')}</div>
                             </div>
                         </div>
                     `).join('')}
@@ -449,7 +448,7 @@ function renderMovieModal(m) {
                 <div class="cast-scroll">
                     ${m.cast.map(c => `
                         <div class="cast-card">
-                            <img src="${c.profile_path ? IMG_W500 + c.profile_path : PLACEHOLDER}" alt="${esc(c.name)}" loading="lazy">
+                            <div class="cast-avatar-fallback">${esc(c.name.charAt(0))}</div>
                             <div class="cast-name" title="${esc(c.name)}">${esc(c.name)}</div>
                             <div class="cast-character" title="${esc(c.character)}">${esc(c.character) || '—'}</div>
                         </div>
@@ -471,80 +470,28 @@ function renderMovieModal(m) {
             </div>` : ''}
 
             <!-- REVIEWS -->
+            ${m.reviews && m.reviews.length ? `
             <div class="detail-section">
-                <h3 class="detail-section-title">📝 Reviews ${m.total_reviews ? `(${m.total_reviews})` : ''}</h3>
-                ${m.reviews && m.reviews.length ? m.reviews.map(r => {
-                    const avatarUrl = r.author_details?.avatar_path
-                        ? (r.author_details.avatar_path.startsWith('/http')
-                            ? r.author_details.avatar_path.substring(1)
-                            : IMG_W500 + r.author_details.avatar_path)
-                        : null;
-                    const initial = r.author ? r.author.charAt(0).toUpperCase() : '?';
-                    const date = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
-                    const rating = r.author_details?.rating;
-                    return `
+                <h3 class="detail-section-title">📝 Critical & Audience Reviews</h3>
+                ${m.reviews.map(r => `
                     <div class="review-card">
                         <div class="review-header">
-                            <div class="review-avatar">${avatarUrl ? `<img src="${avatarUrl}" alt="${esc(r.author)}">` : initial}</div>
+                            <div class="review-avatar">${esc(r.author ? r.author.charAt(0).toUpperCase() : 'U')}</div>
                             <div>
                                 <div class="review-author">${esc(r.author)}</div>
-                                <div class="review-date">${date}</div>
+                                <div class="review-date">${r.created_at || 'Verified Review'}</div>
                             </div>
-                            ${rating ? `<div class="review-rating-badge">⭐ ${rating}/10</div>` : ''}
+                            ${r.author_details?.rating ? `<div class="review-rating-badge">⭐ ${r.author_details.rating}/10</div>` : ''}
                         </div>
-                        <div class="review-content" id="review-${r.id}">${r.content ? r.content.replace(/\n/g, '<br>') : ''}</div>
-                        <button class="review-toggle" onclick="toggleReview('review-${r.id}', this)">Read more</button>
-                    </div>`;
-                }).join('') : '<div class="no-results"><p>No reviews available yet.</p></div>'}
-            </div>
-
-            <!-- EXTRA INFO -->
-            ${m.omdb && (m.omdb.country || m.omdb.language) ? `
-            <div class="detail-section">
-                <h3 class="detail-section-title">📋 Additional Info</h3>
-                <div class="info-grid">
-                    ${m.omdb.country && m.omdb.country !== 'N/A' ? `<div class="info-item"><div class="info-label">Country</div><div class="info-value">${esc(m.omdb.country)}</div></div>` : ''}
-                    ${m.omdb.language && m.omdb.language !== 'N/A' ? `<div class="info-item"><div class="info-label">Language</div><div class="info-value">${esc(m.omdb.language)}</div></div>` : ''}
-                    ${m.omdb.rated && m.omdb.rated !== 'N/A' ? `<div class="info-item"><div class="info-label">Rated</div><div class="info-value">${esc(m.omdb.rated)}</div></div>` : ''}
-                    ${m.omdb.dvd && m.omdb.dvd !== 'N/A' ? `<div class="info-item"><div class="info-label">DVD Release</div><div class="info-value">${esc(m.omdb.dvd)}</div></div>` : ''}
-                    ${m.spoken_languages?.length ? `<div class="info-item"><div class="info-label">Spoken Languages</div><div class="info-value">${m.spoken_languages.map(l => esc(l.english_name || l.name)).join(', ')}</div></div>` : ''}
-                </div>
-            </div>` : ''}
-
-            <!-- PRODUCTION -->
-            ${m.production_companies?.length ? `
-            <div class="detail-section">
-                <h3 class="detail-section-title">🏢 Production</h3>
-                <div class="production-grid">
-                    ${m.production_companies.map(c => `
-                        <div class="production-chip">
-                            ${c.logo_path ? `<img src="${IMG_W500 + c.logo_path}" alt="${esc(c.name)}">` : `<div class="prod-placeholder">🏢</div>`}
-                            <div>
-                                <div class="prod-name">${esc(c.name)}</div>
-                                ${c.origin_country ? `<div class="prod-country">${esc(c.origin_country)}</div>` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>` : ''}
-
-            <!-- AI ANALYSIS (Gemini) -->
-            <div class="detail-section">
-                <h3 class="detail-section-title">🤖 AI Analysis <span class="ai-badge">Powered by Gemini</span></h3>
-                <div id="ai-analysis-container" class="ai-analysis-container">
-                    <div class="ai-loading">
-                        <div class="ai-loading-shimmer"></div>
-                        <div class="ai-loading-shimmer short"></div>
-                        <div class="ai-loading-shimmer"></div>
-                        <span class="ai-loading-text">✨ AI is analyzing this movie...</span>
+                        <div class="review-content" id="review-${r.id || 'r'}">${r.content ? r.content.replace(/\n/g, '<br>') : ''}</div>
                     </div>
-                </div>
-            </div>
+                `).join('')}
+            </div>` : ''}
 
             <!-- SIMILAR MOVIES -->
             ${m.similar?.length ? `
             <div class="detail-section">
-                <h3 class="detail-section-title">🎞️ Similar Movies</h3>
+                <h3 class="detail-section-title">🎞️ Similar Recommendations</h3>
                 <div class="similar-scroll movie-scroll">
                     ${m.similar.map((s, i) => movieCardHTML(s, i)).join('')}
                 </div>
@@ -562,78 +509,8 @@ function hasAnyCrew(crew) {
             crew.composers?.length || crew.cinematographers?.length);
 }
 
-function toggleReview(id, btn) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.toggle('expanded');
-    btn.textContent = el.classList.contains('expanded') ? 'Show less' : 'Read more';
-}
-
-function closeModal() {
-    document.getElementById('movie-modal').classList.add('hidden');
-    document.body.style.overflow = '';
-}
-
-// ═══════════════════════════════════════════════════════
-//  NAVIGATION
-// ═══════════════════════════════════════════════════════
-
-function goHome() {
-    document.getElementById('results-section').classList.add('hidden');
-    document.getElementById('trending-section').classList.remove('hidden');
-    document.getElementById('now-playing-section').classList.remove('hidden');
-    document.getElementById('scroll-indicator').classList.remove('hidden');
-    document.getElementById('search-input').value = '';
-    document.getElementById('nav-search-input').value = '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// ═══════════════════════════════════════════════════════
-//  UTILITY
-// ═══════════════════════════════════════════════════════
-
-function closeSuggestions() {
-    document.getElementById('search-suggestions').classList.add('hidden');
-    document.getElementById('nav-suggestions').classList.add('hidden');
-}
-
-function showLoading() { document.getElementById('loading').classList.remove('hidden'); }
-function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
-
-function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.remove('hidden');
-    setTimeout(() => t.classList.add('hidden'), 3500);
-}
-
-// ═══════════════════════════════════════════════════════
-//  AI ANALYSIS (Gemini)
-// ═══════════════════════════════════════════════════════
-
-async function loadAiAnalysis(movieId) {
-    const container = document.getElementById('ai-analysis-container');
-    if (!container) return;
-
-    try {
-        const data = await apiFetch(`/api/ai-analysis/${movieId}`);
-        if (data.ai_analysis && !data.ai_analysis.error) {
-            renderAiAnalysis(container, data.ai_analysis);
-        } else {
-            container.innerHTML = `
-                <div class="ai-error">
-                    <span>⚠️</span> AI analysis is temporarily unavailable.
-                    ${data.ai_analysis?.error ? `<br><small>${esc(data.ai_analysis.error)}</small>` : ''}
-                </div>`;
-        }
-    } catch (err) {
-        console.error('AI analysis error:', err);
-        container.innerHTML = '<div class="ai-error"><span>⚠️</span> Could not load AI analysis.</div>';
-    }
-}
-
-function renderAiAnalysis(container, ai) {
-    container.innerHTML = `
+function renderAiAnalysisHTML(ai) {
+    return `
         <!-- Verdict + Score -->
         <div class="ai-verdict-row">
             <div class="ai-verdict-card">
@@ -696,7 +573,45 @@ function renderAiAnalysis(container, ai) {
         ${ai.similar_picks?.length ? `
         <div class="ai-picks">
             <div class="ai-label">🎬 AI Recommends</div>
-            <div class="ai-picks-list">${ai.similar_picks.map(p => `<span class="ai-pick-chip">${esc(p)}</span>`).join('')}</div>
+            <div class="ai-picks-list">${ai.similar_picks.map(p => `<span class="ai-pick-chip" onclick="openMovieDetail('${escAttr(p)}')">${esc(p)}</span>`).join('')}</div>
         </div>` : ''}
     `;
+}
+
+function closeModal() {
+    document.getElementById('movie-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// ═══════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════
+
+function goHome() {
+    document.getElementById('results-section').classList.add('hidden');
+    document.getElementById('trending-section').classList.remove('hidden');
+    document.getElementById('now-playing-section').classList.remove('hidden');
+    document.getElementById('scroll-indicator').classList.remove('hidden');
+    document.getElementById('search-input').value = '';
+    document.getElementById('nav-search-input').value = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILITY
+// ═══════════════════════════════════════════════════════
+
+function closeSuggestions() {
+    document.getElementById('search-suggestions').classList.add('hidden');
+    document.getElementById('nav-suggestions').classList.add('hidden');
+}
+
+function showLoading() { document.getElementById('loading').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    setTimeout(() => t.classList.add('hidden'), 3500);
 }

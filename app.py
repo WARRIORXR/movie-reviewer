@@ -1,27 +1,16 @@
 """
 CineScope — Movie Reviewer & Explorer
 Python Flask Backend Server
-
-Aggregates data from 5 APIs:
-  • OMDB    — Ratings (IMDB, Rotten Tomatoes, Metacritic), Awards, Plot
-  • TMDB    — Posters, Cast, Crew, Budget, Revenue, Reviews, Similar, Genres
-  • Watchmode — Streaming availability
-  • YouTube — Official trailers
-  • Gemini  — AI-powered movie analysis, insights & recommendations
+Powered 100% by Google Gemini AI
 """
 
 import json
 import logging
+import time
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import requests
-from config import (
-    OMDB_API_KEY, OMDB_BASE_URL,
-    TMDB_API_KEY, TMDB_BASE_URL, TMDB_IMG_BASE,
-    WATCHMODE_API_KEY, WATCHMODE_BASE_URL,
-    YOUTUBE_API_KEY, YOUTUBE_BASE_URL,
-    GEMINI_API_KEY, GEMINI_BASE_URL, GEMINI_MODEL,
-)
+from config import GEMINI_API_KEY, GEMINI_BASE_URL, GEMINI_MODELS
 
 # ── App setup ───────────────────────────────────────────────
 app = Flask(__name__, static_folder="static", static_url_path="")
@@ -29,6 +18,116 @@ CORS(app)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("CineScope")
+
+# ── In-Memory Cache ─────────────────────────────────────────
+CACHE = {}
+CACHE_TTL = 3600  # 1 hour
+
+
+def get_cached(key):
+    entry = CACHE.get(key)
+    if entry and (time.time() - entry["time"] < CACHE_TTL):
+        return entry["data"]
+    return None
+
+
+def set_cache(key, data):
+    CACHE[key] = {"time": time.time(), "data": data}
+
+
+# ═══════════════════════════════════════════════════════════
+#  GEMINI AI CLIENT
+# ═══════════════════════════════════════════════════════════
+
+def extract_first_json(text):
+    """Safely extracts and parses the primary JSON object or array from a string."""
+    if not text:
+        return None
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1]
+    if text.endswith("```"):
+        text = text.rsplit("```", 1)[0]
+    text = text.strip()
+
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    start_obj = text.find("{")
+    start_arr = text.find("[")
+
+    if start_obj != -1 and (start_arr == -1 or start_obj < start_arr):
+        end_obj = text.rfind("}")
+        if end_obj != -1:
+            try:
+                return json.loads(text[start_obj : end_obj + 1])
+            except Exception:
+                pass
+    elif start_arr != -1:
+        end_arr = text.rfind("]")
+        if end_arr != -1:
+            try:
+                return json.loads(text[start_arr : end_arr + 1])
+            except Exception:
+                pass
+
+    return None
+
+
+def call_gemini_json(prompt, system_instruction=None):
+    """
+    Calls Google Gemini API with JSON structured output mode.
+    Tries fallback models if any encounter an error.
+    """
+    if not GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY is not configured.")
+        return None
+
+    for model in GEMINI_MODELS:
+        url = f"{GEMINI_BASE_URL}/models/{model}:generateContent"
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }],
+            "generationConfig": {
+                "temperature": 0.3,
+                "responseMimeType": "application/json",
+            }
+        }
+        if system_instruction:
+            payload["systemInstruction"] = {
+                "parts": [{"text": system_instruction}]
+            }
+
+        try:
+            r = requests.post(
+                url,
+                params={"key": GEMINI_API_KEY},
+                json=payload,
+                timeout=25
+            )
+            if r.status_code == 200:
+                data = r.json()
+                raw_text = (
+                    data.get("candidates", [{}])[0]
+                    .get("content", {})
+                    .get("parts", [{}])[0]
+                    .get("text", "")
+                )
+                parsed = extract_first_json(raw_text)
+                if parsed is not None:
+                    return parsed
+                else:
+                    logger.warning(f"Could not parse JSON from {model}: {raw_text[:200]}")
+            else:
+                logger.warning(f"Model {model} returned status {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            logger.warning(f"Error calling model {model}: {e}")
+
+    logger.error("All Gemini models failed for prompt.")
+    return None
 
 
 # ═══════════════════════════════════════════════════════════
@@ -41,509 +140,338 @@ def serve_index():
 
 
 # ═══════════════════════════════════════════════════════════
-#  TMDB HELPERS
-# ═══════════════════════════════════════════════════════════
-
-def tmdb_get(endpoint, params=None):
-    """Helper for TMDB API calls."""
-    url = f"{TMDB_BASE_URL}{endpoint}"
-    p = {"api_key": TMDB_API_KEY}
-    if params:
-        p.update(params)
-    try:
-        r = requests.get(url, params=p, timeout=10)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        logger.error(f"TMDB error: {e}")
-        return {}
-
-
-# ═══════════════════════════════════════════════════════════
-#  SEARCH
+#  SEARCH ENDPOINT
 # ═══════════════════════════════════════════════════════════
 
 @app.route("/api/search")
 def search_movies():
-    """Search movies via TMDB."""
+    """
+    Search movies using Gemini AI knowledge base.
+    """
     query = request.args.get("q", "").strip()
     page = request.args.get("page", 1, type=int)
-    if not query:
-        return jsonify({"results": [], "total_pages": 0, "total_results": 0})
 
-    data = tmdb_get("/search/movie", {"query": query, "page": page})
-    return jsonify({
-        "results": data.get("results", []),
-        "total_pages": data.get("total_pages", 0),
-        "total_results": data.get("total_results", 0),
-        "page": data.get("page", 1),
-    })
+    if not query:
+        return jsonify({"results": [], "total_pages": 0, "total_results": 0, "page": 1})
+
+    cache_key = f"search:{query.lower()}:{page}"
+    cached = get_cached(cache_key)
+    if cached:
+        return jsonify(cached)
+
+    prompt = f"""Search for movies matching the user query '{query}' (page {page}).
+Return a JSON object with this exact schema:
+{{
+    "results": [
+        {{
+            "id": 101,
+            "title": "Exact Movie Title",
+            "release_date": "YYYY-MM-DD",
+            "vote_average": 8.8,
+            "overview": "2 sentence summary of plot...",
+            "genres": ["Sci-Fi", "Action"],
+            "poster_path": "https://image.tmdb.org/t/p/w500/... or null"
+        }}
+    ],
+    "total_pages": 1,
+    "total_results": 10,
+    "page": {page}
+}}
+Return 6 to 10 relevant and accurate movies."""
+
+    data = call_gemini_json(prompt, "You are a movie database API powered by Gemini AI. Always return precise JSON matching the schema.")
+    if not data:
+        data = {"results": [], "total_pages": 0, "total_results": 0, "page": page}
+
+    # Ensure integer or string ID is available on all items
+    for idx, item in enumerate(data.get("results", [])):
+        if "id" not in item:
+            item["id"] = abs(hash(item.get("title", f"movie-{idx}"))) % 1000000
+
+    set_cache(cache_key, data)
+    return jsonify(data)
 
 
 # ═══════════════════════════════════════════════════════════
-#  TRENDING / TOP RATED / UPCOMING
+#  CATEGORY ENDPOINTS
 # ═══════════════════════════════════════════════════════════
 
 @app.route("/api/trending")
 def trending():
-    data = tmdb_get("/trending/movie/week")
-    return jsonify({"results": data.get("results", [])})
+    cached = get_cached("cat:trending")
+    if cached:
+        return jsonify(cached)
+
+    prompt = """Return a list of 12 popular/trending blockbuster movies right now.
+Return a JSON object with this exact schema:
+{
+    "results": [
+        {
+            "id": 1,
+            "title": "Movie Title",
+            "release_date": "2024-03-01",
+            "vote_average": 8.5,
+            "overview": "Short plot synopsis...",
+            "genres": ["Action", "Sci-Fi"]
+        }
+    ]
+}"""
+    data = call_gemini_json(prompt)
+    if not data:
+        data = {"results": []}
+
+    for idx, item in enumerate(data.get("results", [])):
+        item["id"] = abs(hash(item.get("title", f"trending-{idx}"))) % 1000000
+
+    set_cache("cat:trending", data)
+    return jsonify(data)
 
 
 @app.route("/api/top-rated")
 def top_rated():
-    data = tmdb_get("/movie/top_rated")
-    return jsonify({"results": data.get("results", [])})
+    cached = get_cached("cat:top_rated")
+    if cached:
+        return jsonify(cached)
+
+    prompt = """Return a list of 12 all-time highest-rated critically acclaimed movies (e.g. The Shawshank Redemption, The Godfather, The Dark Knight, Pulp Fiction, Inception, Interstellar, 12 Angry Men, etc.).
+Return a JSON object with this exact schema:
+{
+    "results": [
+        {
+            "id": 1,
+            "title": "Movie Title",
+            "release_date": "1994-09-23",
+            "vote_average": 9.3,
+            "overview": "Short plot synopsis...",
+            "genres": ["Drama", "Crime"]
+        }
+    ]
+}"""
+    data = call_gemini_json(prompt)
+    if not data:
+        data = {"results": []}
+
+    for idx, item in enumerate(data.get("results", [])):
+        item["id"] = abs(hash(item.get("title", f"top-{idx}"))) % 1000000
+
+    set_cache("cat:top_rated", data)
+    return jsonify(data)
 
 
 @app.route("/api/upcoming")
 def upcoming():
-    data = tmdb_get("/movie/upcoming")
-    return jsonify({"results": data.get("results", [])})
+    cached = get_cached("cat:upcoming")
+    if cached:
+        return jsonify(cached)
+
+    prompt = """Return a list of 12 highly anticipated upcoming or recent major movie releases.
+Return a JSON object with schema:
+{
+    "results": [
+        {
+            "id": 1,
+            "title": "Movie Title",
+            "release_date": "2025-05-15",
+            "vote_average": 8.0,
+            "overview": "Short plot synopsis...",
+            "genres": ["Action", "Adventure"]
+        }
+    ]
+}"""
+    data = call_gemini_json(prompt)
+    if not data:
+        data = {"results": []}
+
+    for idx, item in enumerate(data.get("results", [])):
+        item["id"] = abs(hash(item.get("title", f"upcoming-{idx}"))) % 1000000
+
+    set_cache("cat:upcoming", data)
+    return jsonify(data)
 
 
 @app.route("/api/now-playing")
 def now_playing():
-    data = tmdb_get("/movie/now_playing")
-    return jsonify({"results": data.get("results", [])})
+    cached = get_cached("cat:now_playing")
+    if cached:
+        return jsonify(cached)
 
-
-# ═══════════════════════════════════════════════════════════
-#  FULL MOVIE DETAIL (aggregates ALL 5 APIs)
-# ═══════════════════════════════════════════════════════════
-
-@app.route("/api/movie/<int:movie_id>")
-def movie_detail(movie_id):
-    """
-    Aggregates data from TMDB, OMDB, Watchmode, YouTube, and Gemini
-    into a single comprehensive response.
-    """
-    # ── 1. TMDB: core details ──────────────────────────────
-    movie = tmdb_get(f"/movie/{movie_id}", {
-        "append_to_response": "release_dates"
-    })
-    if not movie or "id" not in movie:
-        return jsonify({"error": "Movie not found"}), 404
-
-    # ── 2. TMDB: credits ──────────────────────────────────
-    credits = tmdb_get(f"/movie/{movie_id}/credits")
-
-    # ── 3. TMDB: reviews ──────────────────────────────────
-    reviews = tmdb_get(f"/movie/{movie_id}/reviews")
-
-    # ── 4. TMDB: similar ──────────────────────────────────
-    similar = tmdb_get(f"/movie/{movie_id}/similar")
-
-    # ── 5. TMDB: watch providers ──────────────────────────
-    tmdb_watch = tmdb_get(f"/movie/{movie_id}/watch/providers")
-
-    # ── 6. OMDB: ratings, awards, extra metadata ─────────
-    omdb_data = fetch_omdb_data(movie.get("imdb_id") or movie.get("title", ""))
-
-    # ── 7. Watchmode: streaming availability ─────────────
-    watchmode_data = fetch_watchmode_data(movie.get("imdb_id", ""))
-
-    # ── 8. YouTube: trailers ─────────────────────────────
-    youtube_data = fetch_youtube_trailers(
-        movie.get("title", ""),
-        movie.get("release_date", "")[:4] if movie.get("release_date") else ""
-    )
-
-    # ── Certification ────────────────────────────────────
-    certification = ""
-    if movie.get("release_dates", {}).get("results"):
-        us_release = next(
-            (r for r in movie["release_dates"]["results"]
-             if r["iso_3166_1"] == "US"), None
-        )
-        if us_release and us_release.get("release_dates"):
-            certification = us_release["release_dates"][0].get("certification", "")
-
-    # ── Build response ───────────────────────────────────
-    result = {
-        # Core info
-        "id": movie.get("id"),
-        "title": movie.get("title"),
-        "tagline": movie.get("tagline"),
-        "overview": movie.get("overview"),
-        "release_date": movie.get("release_date"),
-        "runtime": movie.get("runtime"),
-        "status": movie.get("status"),
-        "original_language": movie.get("original_language"),
-        "popularity": movie.get("popularity"),
-        "imdb_id": movie.get("imdb_id"),
-        "certification": certification,
-
-        # Images
-        "poster_path": movie.get("poster_path"),
-        "backdrop_path": movie.get("backdrop_path"),
-
-        # Genres
-        "genres": movie.get("genres", []),
-
-        # Financials
-        "budget": movie.get("budget", 0),
-        "revenue": movie.get("revenue", 0),
-
-        # TMDB rating
-        "vote_average": movie.get("vote_average"),
-        "vote_count": movie.get("vote_count"),
-
-        # OMDB enrichment
-        "omdb": omdb_data,
-
-        # All ratings aggregated
-        "ratings": build_ratings(movie, omdb_data),
-
-        # Credits
-        "cast": (credits.get("cast") or [])[:20],
-        "crew": {
-            "directors": [c for c in (credits.get("crew") or []) if c.get("job") == "Director"],
-            "writers": [c for c in (credits.get("crew") or []) if c.get("department") == "Writing"][:4],
-            "producers": [c for c in (credits.get("crew") or []) if c.get("job") == "Producer"][:4],
-            "composers": [c for c in (credits.get("crew") or []) if c.get("job") == "Original Music Composer"][:2],
-            "cinematographers": [c for c in (credits.get("crew") or []) if c.get("job") == "Director of Photography"][:2],
-        },
-
-        # Reviews
-        "reviews": reviews.get("results", [])[:6],
-        "total_reviews": reviews.get("total_results", 0),
-
-        # Streaming / Where to Watch
-        "watch_providers": {
-            "tmdb": tmdb_watch.get("results", {}),
-            "watchmode": watchmode_data,
-        },
-
-        # Trailers
-        "youtube_trailers": youtube_data,
-
-        # Similar
-        "similar": (similar.get("results") or [])[:12],
-
-        # Production
-        "production_companies": movie.get("production_companies", []),
-        "production_countries": movie.get("production_countries", []),
-        "spoken_languages": movie.get("spoken_languages", []),
-    }
-
-    return jsonify(result)
-
-
-# ═══════════════════════════════════════════════════════════
-#  AI ANALYSIS ENDPOINT (lazy-loaded separately)
-# ═══════════════════════════════════════════════════════════
-
-@app.route("/api/ai-analysis/<int:movie_id>")
-def ai_analysis(movie_id):
-    """
-    Generates AI-powered movie analysis via Gemini.
-    Called separately to avoid blocking the main detail load.
-    """
-    # Get basic movie info for context
-    movie = tmdb_get(f"/movie/{movie_id}")
-    if not movie or "id" not in movie:
-        return jsonify({"error": "Movie not found"}), 404
-
-    omdb_data = fetch_omdb_data(movie.get("imdb_id") or movie.get("title", ""))
-
-    analysis = fetch_gemini_analysis(movie, omdb_data)
-    return jsonify({"ai_analysis": analysis})
-
-
-# ═══════════════════════════════════════════════════════════
-#  OMDB INTEGRATION
-# ═══════════════════════════════════════════════════════════
-
-def fetch_omdb_data(imdb_id_or_title):
-    """Fetch movie data from OMDB for ratings, awards, etc."""
-    if not imdb_id_or_title:
-        return {}
-    try:
-        params = {"apikey": OMDB_API_KEY}
-        if imdb_id_or_title.startswith("tt"):
-            params["i"] = imdb_id_or_title
-        else:
-            params["t"] = imdb_id_or_title
-
-        r = requests.get(OMDB_BASE_URL, params=params, timeout=8)
-        r.raise_for_status()
-        data = r.json()
-
-        if data.get("Response") == "False":
-            return {}
-
-        return {
-            "rated": data.get("Rated", "N/A"),
-            "awards": data.get("Awards", "N/A"),
-            "metascore": data.get("Metascore", "N/A"),
-            "imdb_rating": data.get("imdbRating", "N/A"),
-            "imdb_votes": data.get("imdbVotes", "N/A"),
-            "box_office": data.get("BoxOffice", "N/A"),
-            "dvd": data.get("DVD", "N/A"),
-            "production": data.get("Production", "N/A"),
-            "website": data.get("Website", "N/A"),
-            "ratings": data.get("Ratings", []),
-            "plot": data.get("Plot", ""),
-            "director": data.get("Director", ""),
-            "actors": data.get("Actors", ""),
-            "writer": data.get("Writer", ""),
-            "country": data.get("Country", ""),
-            "language": data.get("Language", ""),
+    prompt = """Return a list of 12 movies currently in theaters or recently released on streaming.
+Return a JSON object with schema:
+{
+    "results": [
+        {
+            "id": 1,
+            "title": "Movie Title",
+            "release_date": "2024-11-20",
+            "vote_average": 7.9,
+            "overview": "Short plot synopsis...",
+            "genres": ["Drama", "Thriller"]
         }
-    except Exception as e:
-        logger.warning(f"OMDB fetch error: {e}")
-        return {}
+    ]
+}"""
+    data = call_gemini_json(prompt)
+    if not data:
+        data = {"results": []}
+
+    for idx, item in enumerate(data.get("results", [])):
+        item["id"] = abs(hash(item.get("title", f"now-{idx}"))) % 1000000
+
+    set_cache("cat:now_playing", data)
+    return jsonify(data)
 
 
 # ═══════════════════════════════════════════════════════════
-#  WATCHMODE INTEGRATION
+#  FULL MOVIE DETAIL (100% GEMINI AI POWERED)
 # ═══════════════════════════════════════════════════════════
 
-def fetch_watchmode_data(imdb_id):
-    """Fetch streaming sources from Watchmode API."""
-    if not imdb_id:
-        return []
-    try:
-        # Step 1: Get Watchmode title ID from IMDB ID
-        search_url = f"{WATCHMODE_BASE_URL}/search/"
-        r = requests.get(search_url, params={
-            "apiKey": WATCHMODE_API_KEY,
-            "search_field": "imdb_id",
-            "search_value": imdb_id,
-        }, timeout=8)
-        r.raise_for_status()
-        search_data = r.json()
+@app.route("/api/movie/<movie_ident>")
+def movie_detail(movie_ident):
+    """
+    Returns complete movie details, financial metrics, streaming info,
+    cast, crew, reviews, ratings, and AI analysis from Gemini.
+    """
+    title_hint = request.args.get("title", "").strip() or str(movie_ident)
 
-        if not search_data.get("title_results"):
-            return []
+    cache_key = f"movie:{title_hint.lower()}"
+    cached = get_cached(cache_key)
+    if cached:
+        return jsonify(cached)
 
-        title_id = search_data["title_results"][0]["id"]
+    prompt = f"""Provide complete, accurate, and comprehensive data for the movie '{title_hint}' (ID or Title reference: {movie_ident}).
 
-        # Step 2: Get sources for this title
-        sources_url = f"{WATCHMODE_BASE_URL}/title/{title_id}/sources/"
-        r2 = requests.get(sources_url, params={
-            "apiKey": WATCHMODE_API_KEY,
-        }, timeout=8)
-        r2.raise_for_status()
-        sources = r2.json()
-
-        # Deduplicate by name + type
-        seen = set()
-        unique_sources = []
-        for s in sources:
-            key = f"{s.get('name', '')}|{s.get('type', '')}"
-            if key not in seen:
-                seen.add(key)
-                unique_sources.append({
-                    "name": s.get("name", "Unknown"),
-                    "type": s.get("type", ""),
-                    "region": s.get("region", "US"),
-                    "web_url": s.get("web_url", ""),
-                    "price": s.get("price"),
-                    "format": s.get("format", ""),
-                    "ios_url": s.get("ios_url", ""),
-                    "android_url": s.get("android_url", ""),
-                })
-        return unique_sources
-
-    except Exception as e:
-        logger.warning(f"Watchmode fetch error: {e}")
-        return []
-
-
-# ═══════════════════════════════════════════════════════════
-#  YOUTUBE INTEGRATION
-# ═══════════════════════════════════════════════════════════
-
-def fetch_youtube_trailers(title, year):
-    """Search YouTube for official trailers."""
-    if not title:
-        return []
-    try:
-        query = f"{title} {year} official trailer".strip()
-        r = requests.get(f"{YOUTUBE_BASE_URL}/search", params={
-            "key": YOUTUBE_API_KEY,
-            "q": query,
-            "part": "snippet",
-            "type": "video",
-            "maxResults": 6,
-            "order": "relevance",
-            "videoCategoryId": "1",  # Film & Animation
-        }, timeout=8)
-        r.raise_for_status()
-        data = r.json()
-
-        results = []
-        for item in data.get("items", []):
-            snippet = item.get("snippet", {})
-            results.append({
-                "video_id": item["id"]["videoId"],
-                "title": snippet.get("title", ""),
-                "thumbnail": snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
-                "channel": snippet.get("channelTitle", ""),
-                "published_at": snippet.get("publishedAt", ""),
-            })
-        return results
-
-    except Exception as e:
-        logger.warning(f"YouTube fetch error: {e}")
-        return []
-
-
-# ═══════════════════════════════════════════════════════════
-#  RATINGS AGGREGATOR
-# ═══════════════════════════════════════════════════════════
-
-def build_ratings(movie, omdb_data):
-    """Aggregate all ratings into a unified structure."""
-    ratings = []
-
-    # TMDB rating
-    if movie.get("vote_average"):
-        ratings.append({
-            "source": "TMDB",
-            "value": f"{movie['vote_average']:.1f}/10",
-            "score": movie["vote_average"],
-            "icon": "tmdb",
-            "votes": movie.get("vote_count", 0),
-        })
-
-    # OMDB ratings (IMDB, Rotten Tomatoes, Metacritic)
-    for r in omdb_data.get("ratings", []):
-        source = r.get("Source", "")
-        value = r.get("Value", "")
-        score = 0
-
-        if source == "Internet Movie Database":
-            try:
-                score = float(value.split("/")[0])
-            except (ValueError, IndexError):
-                score = 0
-            ratings.append({
-                "source": "IMDb",
-                "value": value,
-                "score": score,
-                "icon": "imdb",
-                "votes": omdb_data.get("imdb_votes", "N/A"),
-            })
-        elif source == "Rotten Tomatoes":
-            try:
-                score = float(value.replace("%", "")) / 10
-            except ValueError:
-                score = 0
-            ratings.append({
-                "source": "Rotten Tomatoes",
-                "value": value,
-                "score": score,
-                "icon": "rt",
-                "votes": None,
-            })
-        elif source == "Metacritic":
-            try:
-                score = float(value.split("/")[0]) / 10
-            except (ValueError, IndexError):
-                score = 0
-            ratings.append({
-                "source": "Metacritic",
-                "value": value,
-                "score": score,
-                "icon": "metacritic",
-                "votes": None,
-            })
-
-    return ratings
-
-
-# ═══════════════════════════════════════════════════════════
-#  GEMINI AI INTEGRATION
-# ═══════════════════════════════════════════════════════════
-
-def fetch_gemini_analysis(movie, omdb_data):
-    """Generate AI-powered movie analysis using Google Gemini."""
-    title = movie.get("title", "Unknown")
-    year = (movie.get("release_date") or "")[:4]
-    overview = movie.get("overview", "")
-    genres = ", ".join(g.get("name", "") for g in movie.get("genres", []))
-    rating = movie.get("vote_average", "N/A")
-    budget = movie.get("budget", 0)
-    revenue = movie.get("revenue", 0)
-    awards = omdb_data.get("awards", "N/A") if omdb_data else "N/A"
-    director = omdb_data.get("director", "Unknown") if omdb_data else "Unknown"
-    actors = omdb_data.get("actors", "Unknown") if omdb_data else "Unknown"
-
-    prompt = f"""You are a world-class film critic and movie expert. Analyze the following movie and respond ONLY with a valid JSON object (no markdown, no code fences, just raw JSON).
-
-Movie: {title} ({year})
-Genres: {genres}
-Director: {director}
-Cast: {actors}
-Plot: {overview}
-Rating: {rating}/10
-Budget: ${budget:,} | Revenue: ${revenue:,}
-Awards: {awards}
-
-Respond with this exact JSON structure:
+Respond ONLY with this exact JSON structure:
 {{
-    "verdict": "A punchy 1-2 sentence verdict — should you watch it?",
-    "score": "Your AI rating out of 10 (number only, like 8.5)",
-    "themes": ["theme1", "theme2", "theme3"],
-    "strengths": ["strength1", "strength2", "strength3"],
-    "weaknesses": ["weakness1", "weakness2"],
-    "mood": "The overall mood/vibe in 2-3 words",
-    "best_for": "Who would enjoy this most (e.g., 'Sci-fi fans who love mind-bending plots')",
-    "fun_facts": ["An interesting fact about this movie", "Another fun fact"],
-    "similar_picks": ["Similar Movie 1", "Similar Movie 2", "Similar Movie 3"],
-    "one_liner": "A witty one-liner review in under 15 words"
+    "id": 12345,
+    "title": "Official Movie Title",
+    "tagline": "Famous tagline or quote",
+    "overview": "Comprehensive 3-4 sentence plot synopsis without major spoilers.",
+    "release_date": "YYYY-MM-DD",
+    "runtime": 148,
+    "status": "Released",
+    "original_language": "en",
+    "popularity": 120.5,
+    "certification": "PG-13",
+    "imdb_id": "tt1375666",
+    "genres": [{{"id": 1, "name": "Action"}}, {{"id": 2, "name": "Sci-Fi"}}],
+    "budget": 160000000,
+    "revenue": 836836967,
+    "vote_average": 8.8,
+    "vote_count": 2500000,
+    "awards": "Won 4 Academy Awards. 158 wins & 220 nominations total.",
+    "ratings": [
+        {{"source": "IMDb", "value": "8.8/10", "score": 8.8, "icon": "imdb", "votes": "2.5M"}},
+        {{"source": "Rotten Tomatoes", "value": "87%", "score": 8.7, "icon": "rt", "votes": null}},
+        {{"source": "Metacritic", "value": "74/100", "score": 7.4, "icon": "metacritic", "votes": null}},
+        {{"source": "Gemini AI", "value": "9.2/10", "score": 9.2, "icon": "gemini", "votes": "AI Score"}}
+    ],
+    "omdb": {{
+        "awards": "Won 4 Academy Awards. 158 wins & 220 nominations total.",
+        "box_office": "$292,576,195",
+        "country": "United States, United Kingdom",
+        "language": "English, Japanese, French",
+        "rated": "PG-13",
+        "dvd": "07 Dec 2010"
+    }},
+    "cast": [
+        {{"name": "Leonardo DiCaprio", "character": "Dom Cobb"}},
+        {{"name": "Joseph Gordon-Levitt", "character": "Arthur"}},
+        {{"name": "Elliot Page", "character": "Ariadne"}},
+        {{"name": "Tom Hardy", "character": "Eames"}},
+        {{"name": "Ken Watanabe", "character": "Saito"}},
+        {{"name": "Cillian Murphy", "character": "Robert Fischer"}},
+        {{"name": "Marion Cotillard", "character": "Mal Cobb"}},
+        {{"name": "Michael Caine", "character": "Prof. Stephen Miles"}}
+    ],
+    "crew": {{
+        "directors": [{{"name": "Christopher Nolan", "job": "Director"}}],
+        "writers": [{{"name": "Christopher Nolan", "job": "Writer"}}],
+        "producers": [{{"name": "Emma Thomas", "job": "Producer"}}, {{"name": "Christopher Nolan", "job": "Producer"}}],
+        "composers": [{{"name": "Hans Zimmer", "job": "Composer"}}],
+        "cinematographers": [{{"name": "Wally Pfister", "job": "Cinematographer"}}]
+    }},
+    "watch_providers": {{
+        "sources": [
+            {{"name": "Netflix", "type": "Stream", "web_url": "https://www.netflix.com", "price": null}},
+            {{"name": "Max (HBO)", "type": "Stream", "web_url": "https://www.max.com", "price": null}},
+            {{"name": "Amazon Prime Video", "type": "Rent / Buy", "web_url": "https://www.amazon.com", "price": "3.99"}},
+            {{"name": "Apple TV", "type": "Rent / Buy", "web_url": "https://tv.apple.com", "price": "3.99"}},
+            {{"name": "YouTube Movies", "type": "Rent", "web_url": "https://www.youtube.com", "price": "3.99"}}
+        ]
+    }},
+    "youtube_trailers": [
+        {{"title": "Official Main Trailer", "video_id": "YoHD9XEInc0", "channel": "Warner Bros. Pictures"}},
+        {{"title": "Official Teaser Trailer", "video_id": "d3A3-zSO60E", "channel": "Warner Bros. Pictures"}}
+    ],
+    "reviews": [
+        {{
+            "id": "rev1",
+            "author": "FilmCritic_Alex",
+            "content": "A breathtaking masterpiece of original storytelling and visual innovation. Christopher Nolan delivers on every level.",
+            "created_at": "2023-05-10",
+            "author_details": {{"rating": 10}}
+        }},
+        {{
+            "id": "rev2",
+            "author": "CinemaLover99",
+            "content": "Hans Zimmer's score paired with stunning cinematography makes this one of the greatest films of the 21st century.",
+            "created_at": "2023-08-22",
+            "author_details": {{"rating": 9}}
+        }}
+    ],
+    "total_reviews": 2,
+    "similar": [
+        {{"id": 201, "title": "Interstellar", "release_date": "2014-11-07", "vote_average": 8.7}},
+        {{"id": 202, "title": "Shutter Island", "release_date": "2010-02-19", "vote_average": 8.2}},
+        {{"id": 203, "title": "The Matrix", "release_date": "1999-03-31", "vote_average": 8.7}},
+        {{"id": 204, "title": "Tenet", "release_date": "2020-08-26", "vote_average": 7.3}}
+    ],
+    "production_companies": [
+        {{"name": "Syncopy", "origin_country": "GB"}},
+        {{"name": "Warner Bros. Pictures", "origin_country": "US"}},
+        {{"name": "Legendary Pictures", "origin_country": "US"}}
+    ],
+    "spoken_languages": [
+        {{"name": "English", "english_name": "English"}},
+        {{"name": "Japanese", "english_name": "Japanese"}},
+        {{"name": "French", "english_name": "French"}}
+    ],
+    "ai_analysis": {{
+        "verdict": "An essential cinematic achievement that rewards multiple viewings with deeper emotional and intellectual layers.",
+        "score": 9.2,
+        "one_liner": "A mind-bending heist that dreams bigger than any Hollywood thriller before it.",
+        "mood": "Intense, cerebral, and mind-bending",
+        "best_for": "Fans of high-concept sci-fi, mind games, and visionary world-building.",
+        "themes": ["Nature of Reality", "Grief and Guilt", "Subconscious Desires", "Memory Architecture"],
+        "strengths": ["Groundbreaking visual effects", "Iconic Hans Zimmer soundtrack", "Impeccable ensemble cast"],
+        "weaknesses": ["Heavy exposition in the first act", "Complex rules demand total focus"],
+        "fun_facts": [
+            "The revolving hallway sequence was filmed using a massive 100-foot rotating centrifuge set.",
+            "The iconic 'BRAAAM' brass horns in the score are slowed-down tempo manipulations of Edith Piaf's 'Non, je ne regrette rien'."
+        ],
+        "similar_picks": ["Interstellar", "The Prestige", "Memento", "Paprika"]
+    }}
 }}"""
 
+    data = call_gemini_json(prompt, "You are a movie encyclopedia that generates factual, detailed, high-fidelity movie records in JSON.")
+    if not data:
+        return jsonify({"error": "Movie details could not be retrieved from Gemini AI."}), 500
+
+    set_cache(cache_key, data)
+    return jsonify(data)
+
+
+@app.route("/api/ai-analysis/<movie_ident>")
+def ai_analysis(movie_ident):
+    """
+    Returns AI analysis for a movie.
+    """
+    title_hint = request.args.get("title", "").strip() or str(movie_ident)
+    movie_res = movie_detail(title_hint)
     try:
-        url = f"{GEMINI_BASE_URL}/models/{GEMINI_MODEL}:generateContent"
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 800,
-            }
-        }
-
-        r = requests.post(
-            url,
-            params={"key": GEMINI_API_KEY},
-            json=payload,
-            timeout=15
-        )
-        r.raise_for_status()
-        data = r.json()
-
-        # Extract text from Gemini response
-        text = (
-            data.get("candidates", [{}])[0]
-            .get("content", {})
-            .get("parts", [{}])[0]
-            .get("text", "")
-        )
-
-        # Clean up: strip markdown fences if present
-        text = text.strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[-1]  # Remove first line
-        if text.endswith("```"):
-            text = text.rsplit("```", 1)[0]
-        text = text.strip()
-
-        # Parse JSON
-        analysis = json.loads(text)
-        return analysis
-
-    except json.JSONDecodeError as e:
-        logger.warning(f"Gemini JSON parse error: {e}")
-        return {"error": "AI analysis format error", "raw": text[:500] if 'text' in dir() else ""}
-    except Exception as e:
-        logger.warning(f"Gemini API error: {e}")
-        return {"error": f"AI analysis unavailable: {str(e)}"}
+        data = movie_res.get_json()
+        return jsonify({"ai_analysis": data.get("ai_analysis", {})})
+    except Exception:
+        return jsonify({"ai_analysis": {}})
 
 
 # ═══════════════════════════════════════════════════════════
@@ -551,5 +479,5 @@ Respond with this exact JSON structure:
 # ═══════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    logger.info("🎬 CineScope server starting on http://localhost:5000")
+    logger.info("🎬 CineScope server starting on http://localhost:5000 (Gemini AI Powered)")
     app.run(debug=True, host="0.0.0.0", port=5000)

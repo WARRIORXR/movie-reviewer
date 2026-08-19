@@ -2,10 +2,15 @@
 
 A next-generation, full-stack movie discovery platform **powered 100% by Google Gemini AI** and built with **Python + JavaScript**. Search any movie and instantly get comprehensive intelligence, ratings, reviews, box office financials, where to watch, cast & crew, and AI-powered critical analysis!
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-movie--reviewer--three.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://movie-reviewer-three.vercel.app/)
 ![CineScope](https://img.shields.io/badge/CineScope-Movie%20Reviewer-7c5cfc?style=for-the-badge)
 ![Gemini](https://img.shields.io/badge/AI-Google%20Gemini-4285f4?style=for-the-badge&logo=google&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-Flask-3776ab?style=for-the-badge&logo=python&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-f7df1e?style=for-the-badge&logo=javascript&logoColor=black)
+
+🌐 **Live Website:** [https://movie-reviewer-three.vercel.app/](https://movie-reviewer-three.vercel.app/)
+
+---
 
 ## ✨ Features
 
@@ -40,9 +45,14 @@ A next-generation, full-stack movie discovery platform **powered 100% by Google 
 - **Google Fonts** — Inter, Outfit, JetBrains Mono
 
 ### API
-- **Google Gemini API** (`gemini-3.5-flash`, `gemini-3.6-flash`, `gemini-3.7-flash`) — Generative movie intelligence & structured encyclopedia
+- **Google Gemini API** (`gemini-3.1-flash-lite`, `gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.6-flash`) — Generative movie intelligence & structured encyclopedia
 
-## 🚀 Getting Started
+## 🌐 Live Deployment
+
+Try out the live application on Vercel:
+👉 **[https://movie-reviewer-three.vercel.app/](https://movie-reviewer-three.vercel.app/)**
+
+## 🚀 Local Getting Started
 
 ### Prerequisites
 - Python 3.8+

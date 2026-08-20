@@ -1,16 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineScope — Movie Reviewer & Explorer | Gemini AI</title>
-    <meta name="description" content="Discover everything about any movie — AI Critical Analysis, Ratings from IMDb & Rotten Tomatoes, Box Office & Budget, Streaming platforms, Cast & Crew powered 100% by Google Gemini AI.">
+    <title>CineScope — Modern Movie Search, Reviews & Intelligence</title>
+    <meta name="description" content="Search movies, view high-res posters, official YouTube trailers, IMDb & Rotten Tomatoes ratings, box office financials, streaming availability, cast filmographies, and AI critical insights.">
+    <meta name="theme-color" content="#07070d">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
+    <!-- Main Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,25 +21,40 @@
          NAVBAR
          ═══════════════════════════════════════════════════════ -->
     <nav class="navbar" id="navbar">
-        <div class="nav-brand" onclick="goHome()">
+        <div class="nav-brand" onclick="goHome()" role="button" tabindex="0" title="Back to Home">
             <span class="logo-icon">🎬</span>
             <span class="logo-text">Cine<span class="gradient-text">Scope</span></span>
-            <span class="nav-badge">AI</span>
+            <span class="nav-badge">PRO</span>
         </div>
 
         <div class="nav-center">
             <div class="nav-search-wrapper">
                 <span class="nav-search-icon">🔍</span>
-                <input type="text" id="nav-search-input" placeholder="Quick search..." autocomplete="off">
-                <div class="suggestions-dropdown hidden" id="nav-suggestions"></div>
+                <input type="text" id="nav-search-input" placeholder="Quick search movies (press '/' to focus)..." autocomplete="off" aria-label="Search movies">
+                <span class="nav-search-kbd">/</span>
+                <div class="suggestions-dropdown hidden" id="nav-suggestions" role="listbox"></div>
             </div>
         </div>
 
-        <div class="nav-links">
-            <a href="#trending" onclick="showCategory('trending')">TRENDING</a>
-            <a href="#top-rated" onclick="showCategory('top-rated')">TOP RATED</a>
-            <a href="#upcoming" onclick="showCategory('upcoming')">UPCOMING</a>
-            <a href="#now-playing" onclick="showCategory('now-playing')">NOW PLAYING</a>
+        <div class="nav-right">
+            <div class="nav-links">
+                <a href="javascript:void(0)" onclick="showCategory('trending')" class="nav-link" id="nav-trending">🔥 Trending</a>
+                <a href="javascript:void(0)" onclick="showCategory('top-rated')" class="nav-link" id="nav-top-rated">⭐ Top Rated</a>
+                <a href="javascript:void(0)" onclick="showCategory('upcoming')" class="nav-link" id="nav-upcoming">🎬 Upcoming</a>
+                <a href="javascript:void(0)" onclick="showCategory('now-playing')" class="nav-link" id="nav-now-playing">🍿 Now Playing</a>
+            </div>
+
+            <!-- Watchlist Button -->
+            <button class="nav-action-btn watchlist-btn" onclick="openWatchlistDrawer()" title="View Watchlist" aria-label="Open Watchlist">
+                <span class="btn-icon">❤️</span>
+                <span class="btn-label">Watchlist</span>
+                <span class="badge-count" id="watchlist-badge">0</span>
+            </button>
+
+            <!-- Theme Toggle Button -->
+            <button class="nav-action-btn theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode" aria-label="Toggle Theme">
+                <span class="theme-icon" id="theme-icon">🌙</span>
+            </button>
         </div>
     </nav>
 
@@ -46,109 +63,365 @@
          ═══════════════════════════════════════════════════════ -->
     <header class="hero" id="hero">
         <div class="hero-particles" id="hero-particles"></div>
-        <div class="hero-bg-overlay"></div>
+        <div class="hero-bg-glow hero-glow-1"></div>
+        <div class="hero-bg-glow hero-glow-2"></div>
+
         <div class="hero-content">
-            <div class="hero-badge">✨ 100% Powered by Google Gemini AI</div>
+            <div class="hero-badge">
+                <span class="pulse-dot"></span>
+                <span>Next-Gen Cinematic Intelligence Engine</span>
+            </div>
+
             <h1 class="hero-title">
-                Discover <span class="gradient-text">Every Detail</span><br>
-                About Any Movie
+                Explore <span class="gradient-text">Every Masterpiece</span><br>
+                In Cinema History
             </h1>
+
             <p class="hero-subtitle">
-                AI Critical Insights &bull; IMDb & Rotten Tomatoes Ratings &bull; Budget & Box Office &bull; Where to Stream &bull; Cast & Crew
+                Official YouTube Trailers &bull; IMDb & Rotten Tomatoes Ratings &bull; Box Office Financials &bull; Where to Stream &bull; Clickable Cast & AI Insights
             </p>
 
-            <!-- Search bar -->
+            <!-- Main Search Container -->
             <div class="search-container">
                 <div class="search-wrapper">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="search-input" placeholder="Search for any movie (e.g. Inception, Oppenheimer, Interstellar)..." autocomplete="off">
-                    <button id="search-btn" onclick="searchMovies()">Search →</button>
+                    <input type="text" id="search-input" placeholder="Search for movies, actors, directors (e.g. Inception, Oppenheimer, Nolan)..." autocomplete="off" aria-label="Main movie search">
+                    <button class="search-clear-btn hidden" id="search-clear" onclick="clearSearchInput()" title="Clear search">✕</button>
+                    <button id="search-btn" class="search-action-btn" onclick="triggerSearch()">
+                        <span>Search</span>
+                        <span class="arrow-icon">→</span>
+                    </button>
                 </div>
-                <div class="suggestions-dropdown hidden" id="search-suggestions"></div>
+                <div class="suggestions-dropdown hidden" id="search-suggestions" role="listbox"></div>
             </div>
 
-            <!-- Stats counter -->
+            <!-- Quick Trending Tags -->
+            <div class="hero-tags">
+                <span class="tags-label">Trending Now:</span>
+                <button class="hero-tag-chip" onclick="quickSearch('Inception')">Inception</button>
+                <button class="hero-tag-chip" onclick="quickSearch('Dune: Part Two')">Dune: Part Two</button>
+                <button class="hero-tag-chip" onclick="quickSearch('Oppenheimer')">Oppenheimer</button>
+                <button class="hero-tag-chip" onclick="quickSearch('Interstellar')">Interstellar</button>
+                <button class="hero-tag-chip" onclick="quickSearch('The Dark Knight')">The Dark Knight</button>
+                <button class="hero-tag-chip" onclick="quickSearch('Spider-Man')">Spider-Man</button>
+            </div>
+
+            <!-- Stats Bar -->
             <div class="hero-stats">
-                <div class="stat-item"><span class="stat-value" id="stat-movies">Infinite</span><span class="stat-label">AI Movie Knowledge</span></div>
+                <div class="stat-item">
+                    <span class="stat-value">50,000+</span>
+                    <span class="stat-label">Movies & Series</span>
+                </div>
                 <div class="stat-divider"></div>
-                <div class="stat-item"><span class="stat-value">Gemini AI</span><span class="stat-label">Intelligence Engine</span></div>
+                <div class="stat-item">
+                    <span class="stat-value">100%</span>
+                    <span class="stat-label">Official 4K Trailers</span>
+                </div>
                 <div class="stat-divider"></div>
-                <div class="stat-item"><span class="stat-value">200+</span><span class="stat-label">Streaming Services Tracked</span></div>
+                <div class="stat-item">
+                    <span class="stat-value">Instant</span>
+                    <span class="stat-label">Streaming Guides</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-value">AI Pro</span>
+                    <span class="stat-label">Critical Breakdown</span>
+                </div>
             </div>
-        </div>
-
-        <div class="scroll-indicator" id="scroll-indicator">
-            <span>SCROLL TO EXPLORE</span>
-            <div class="scroll-arrow">↓</div>
         </div>
     </header>
 
     <!-- ═══════════════════════════════════════════════════════
-         MAIN CONTENT
+         INTERACTIVE FILTER & CONTROLS BAR
+         ═══════════════════════════════════════════════════════ -->
+    <section class="filters-section" id="filters-section">
+        <div class="filters-container">
+            <div class="filters-top">
+                <div class="filters-heading">
+                    <span class="filter-icon">⚡</span>
+                    <span class="filter-title">Filters & Sorting</span>
+                </div>
+                <button class="reset-filters-btn" id="reset-filters-btn" onclick="resetAllFilters()">
+                    <span>↺ Reset Filters</span>
+                </button>
+            </div>
+
+            <!-- Genre Pills Scroll -->
+            <div class="genre-pills" id="genre-pills">
+                <button class="genre-pill active" data-genre="all" onclick="setGenreFilter('all', this)">All Genres</button>
+                <button class="genre-pill" data-genre="Action" onclick="setGenreFilter('Action', this)">💥 Action</button>
+                <button class="genre-pill" data-genre="Sci-Fi" onclick="setGenreFilter('Sci-Fi', this)">🚀 Sci-Fi</button>
+                <button class="genre-pill" data-genre="Drama" onclick="setGenreFilter('Drama', this)">🎭 Drama</button>
+                <button class="genre-pill" data-genre="Thriller" onclick="setGenreFilter('Thriller', this)">⚡ Thriller</button>
+                <button class="genre-pill" data-genre="Crime" onclick="setGenreFilter('Crime', this)">🕵️ Crime</button>
+                <button class="genre-pill" data-genre="Adventure" onclick="setGenreFilter('Adventure', this)">🗺️ Adventure</button>
+                <button class="genre-pill" data-genre="Animation" onclick="setGenreFilter('Animation', this)">🎨 Animation</button>
+                <button class="genre-pill" data-genre="Comedy" onclick="setGenreFilter('Comedy', this)">😂 Comedy</button>
+                <button class="genre-pill" data-genre="Fantasy" onclick="setGenreFilter('Fantasy', this)">🔮 Fantasy</button>
+                <button class="genre-pill" data-genre="History" onclick="setGenreFilter('History', this)">🏛️ History</button>
+            </div>
+
+            <!-- Filter Dropdowns Row -->
+            <div class="filter-dropdowns-row">
+                <!-- Year Filter -->
+                <div class="filter-group">
+                    <label for="filter-year">📅 Release Year</label>
+                    <select id="filter-year" onchange="applyFilters()">
+                        <option value="all">All Years</option>
+                        <option value="2025">2025 (Upcoming / Latest)</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                        <option value="2020-2022">2020 – 2022</option>
+                        <option value="2010s">2010 – 2019 (2010s)</option>
+                        <option value="2000s">2000 – 2009 (2000s)</option>
+                        <option value="1990s">1990 – 1999 (1990s)</option>
+                        <option value="pre-1990">Classic (Pre-1990)</option>
+                    </select>
+                </div>
+
+                <!-- Rating Filter -->
+                <div class="filter-group">
+                    <label for="filter-rating">⭐ Minimum Rating</label>
+                    <select id="filter-rating" onchange="applyFilters()">
+                        <option value="0">Any Rating</option>
+                        <option value="8.5">⭐ 8.5+ Masterpiece</option>
+                        <option value="8.0">⭐ 8.0+ Excellent</option>
+                        <option value="7.5">⭐ 7.5+ Great</option>
+                        <option value="7.0">⭐ 7.0+ Good</option>
+                    </select>
+                </div>
+
+                <!-- Language Filter -->
+                <div class="filter-group">
+                    <label for="filter-lang">🌐 Language</label>
+                    <select id="filter-lang" onchange="applyFilters()">
+                        <option value="all">All Languages</option>
+                        <option value="en">English (EN)</option>
+                        <option value="ja">Japanese (JA)</option>
+                        <option value="ko">Korean (KO)</option>
+                        <option value="es">Spanish (ES)</option>
+                        <option value="fr">French (FR)</option>
+                        <option value="hi">Hindi (HI)</option>
+                        <option value="de">German (DE)</option>
+                        <option value="it">Italian (IT)</option>
+                    </select>
+                </div>
+
+                <!-- Sort By -->
+                <div class="filter-group">
+                    <label for="filter-sort">🔄 Sort By</label>
+                    <select id="filter-sort" onchange="applyFilters()">
+                        <option value="popularity">🔥 Most Popular</option>
+                        <option value="rating">⭐ Highest Rated</option>
+                        <option value="newest">📅 Newest First</option>
+                        <option value="oldest">🕰️ Oldest First</option>
+                        <option value="title">🔤 Title (A–Z)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Active Filter Indicators -->
+            <div class="active-filters-bar hidden" id="active-filters-bar">
+                <span class="active-label">Active:</span>
+                <div class="active-tags-list" id="active-tags-list"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         MAIN CONTENT & SECTIONS
          ═══════════════════════════════════════════════════════ -->
     <main class="main-content" id="main-content">
 
-        <!-- SEARCH RESULTS / CATEGORY VIEW -->
+        <!-- SEARCH / FILTER RESULTS SECTION -->
         <section class="results-section hidden" id="results-section">
-            <div class="section-header">
-                <h2 class="section-title" id="results-title">Search Results</h2>
+            <div class="section-header-flex">
+                <div>
+                    <h2 class="section-title" id="results-title">Search Results</h2>
+                    <p class="section-subtitle" id="results-subtitle">Showing matched movies</p>
+                </div>
                 <button class="btn-secondary" onclick="goHome()">← Back to Home</button>
             </div>
             <div class="movie-grid" id="results-grid"></div>
             <div class="pagination hidden" id="pagination"></div>
         </section>
 
-        <!-- TRENDING THIS WEEK -->
+        <!-- TRENDING SECTION -->
         <section class="movie-section" id="trending-section">
             <div class="section-header-flex">
-                <div>
+                <div class="section-title-group">
                     <h2 class="section-title">🔥 Trending Blockbusters</h2>
-                    <p class="section-subtitle">What audiences around the globe are watching</p>
+                    <p class="section-subtitle">What audiences around the globe are watching right now</p>
                 </div>
-                <button class="view-all-btn" onclick="showCategory('trending')">View All →</button>
+                <button class="view-all-btn" onclick="showCategory('trending')">View All (12) →</button>
             </div>
-            <div class="movie-scroll" id="trending-grid"></div>
+            <div class="movie-scroll-container">
+                <button class="scroll-nav-btn prev" onclick="scrollCarousel('trending-grid', -400)" aria-label="Scroll left">‹</button>
+                <div class="movie-scroll" id="trending-grid"></div>
+                <button class="scroll-nav-btn next" onclick="scrollCarousel('trending-grid', 400)" aria-label="Scroll right">›</button>
+            </div>
         </section>
 
-        <!-- NOW PLAYING -->
+        <!-- TOP RATED SECTION -->
+        <section class="movie-section" id="top-rated-section">
+            <div class="section-header-flex">
+                <div class="section-title-group">
+                    <h2 class="section-title">⭐ All-Time Highest Rated</h2>
+                    <p class="section-subtitle">Cinematic masterworks acclaimed by critics & audiences</p>
+                </div>
+                <button class="view-all-btn" onclick="showCategory('top-rated')">View All →</button>
+            </div>
+            <div class="movie-scroll-container">
+                <button class="scroll-nav-btn prev" onclick="scrollCarousel('top-rated-grid', -400)" aria-label="Scroll left">‹</button>
+                <div class="movie-scroll" id="top-rated-grid"></div>
+                <button class="scroll-nav-btn next" onclick="scrollCarousel('top-rated-grid', 400)" aria-label="Scroll right">›</button>
+            </div>
+        </section>
+
+        <!-- UPCOMING RELEASES SECTION -->
+        <section class="movie-section" id="upcoming-section">
+            <div class="section-header-flex">
+                <div class="section-title-group">
+                    <h2 class="section-title">🎬 Highly Anticipated Releases</h2>
+                    <p class="section-subtitle">Upcoming major cinema & franchise spectacles</p>
+                </div>
+                <button class="view-all-btn" onclick="showCategory('upcoming')">View All →</button>
+            </div>
+            <div class="movie-scroll-container">
+                <button class="scroll-nav-btn prev" onclick="scrollCarousel('upcoming-grid', -400)" aria-label="Scroll left">‹</button>
+                <div class="movie-scroll" id="upcoming-grid"></div>
+                <button class="scroll-nav-btn next" onclick="scrollCarousel('upcoming-grid', 400)" aria-label="Scroll right">›</button>
+            </div>
+        </section>
+
+        <!-- NOW PLAYING SECTION -->
         <section class="movie-section" id="now-playing-section">
             <div class="section-header-flex">
-                <div>
-                    <h2 class="section-title">🍿 Now Playing & Recent Releases</h2>
-                    <p class="section-subtitle">Fresh in theaters and on streaming</p>
+                <div class="section-title-group">
+                    <h2 class="section-title">🍿 Now Playing & Fresh Releases</h2>
+                    <p class="section-subtitle">Available right now in theaters and on streaming</p>
                 </div>
                 <button class="view-all-btn" onclick="showCategory('now-playing')">View All →</button>
             </div>
-            <div class="movie-scroll" id="now-playing-grid"></div>
+            <div class="movie-scroll-container">
+                <button class="scroll-nav-btn prev" onclick="scrollCarousel('now-playing-grid', -400)" aria-label="Scroll left">‹</button>
+                <div class="movie-scroll" id="now-playing-grid"></div>
+                <button class="scroll-nav-btn next" onclick="scrollCarousel('now-playing-grid', 400)" aria-label="Scroll right">›</button>
+            </div>
         </section>
 
     </main>
 
     <!-- ═══════════════════════════════════════════════════════
-         MOVIE DETAIL MODAL
+         FULL MOVIE DETAIL MODAL (With Embedded Player & Reviews)
          ═══════════════════════════════════════════════════════ -->
-    <div class="movie-modal hidden" id="movie-modal">
+    <div class="movie-modal hidden" id="movie-modal" role="dialog" aria-modal="true">
         <div class="modal-backdrop" onclick="closeModal()"></div>
         <div class="modal-container">
-            <button class="modal-close" onclick="closeModal()" title="Close (ESC)">✕</button>
+            <button class="modal-close" onclick="closeModal()" title="Close (ESC)" aria-label="Close modal">✕</button>
             <div class="modal-body" id="modal-body">
+                <!-- Dynamically injected via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         WATCHLIST DRAWER / MODAL
+         ═══════════════════════════════════════════════════════ -->
+    <div class="watchlist-drawer hidden" id="watchlist-drawer" role="dialog" aria-modal="true">
+        <div class="drawer-backdrop" onclick="closeWatchlistDrawer()"></div>
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <div class="drawer-title-wrap">
+                    <span class="drawer-icon">❤️</span>
+                    <h3 class="drawer-title">My Watchlist</h3>
+                    <span class="watchlist-count-tag" id="drawer-count-tag">0 saved</span>
+                </div>
+                <button class="drawer-close-btn" onclick="closeWatchlistDrawer()" aria-label="Close watchlist">✕</button>
+            </div>
+
+            <div class="drawer-actions">
+                <button class="btn-clear-watchlist" onclick="clearWatchlist()">Clear All</button>
+            </div>
+
+            <div class="watchlist-items-list" id="watchlist-items-list">
                 <!-- Dynamically populated -->
             </div>
         </div>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════
-         LOADING & TOAST
+         SHARE MODAL
+         ═══════════════════════════════════════════════════════ -->
+    <div class="share-modal hidden" id="share-modal" role="dialog" aria-modal="true">
+        <div class="modal-backdrop" onclick="closeShareModal()"></div>
+        <div class="share-card">
+            <div class="share-header">
+                <h3 class="share-title">📤 Share Movie</h3>
+                <button class="share-close-btn" onclick="closeShareModal()">✕</button>
+            </div>
+            <div class="share-movie-preview" id="share-movie-preview">
+                <!-- Injected movie preview -->
+            </div>
+            <div class="share-buttons-grid">
+                <button class="share-btn twitter" onclick="shareToSocial('twitter')">
+                    <span class="social-icon">𝕏</span> Twitter / X
+                </button>
+                <button class="share-btn whatsapp" onclick="shareToSocial('whatsapp')">
+                    <span class="social-icon">💬</span> WhatsApp
+                </button>
+                <button class="share-btn facebook" onclick="shareToSocial('facebook')">
+                    <span class="social-icon">👥</span> Facebook
+                </button>
+                <button class="share-btn reddit" onclick="shareToSocial('reddit')">
+                    <span class="social-icon">🤖</span> Reddit
+                </button>
+                <button class="share-btn linkedin" onclick="shareToSocial('linkedin')">
+                    <span class="social-icon">💼</span> LinkedIn
+                </button>
+                <button class="share-btn telegram" onclick="shareToSocial('telegram')">
+                    <span class="social-icon">✈️</span> Telegram
+                </button>
+            </div>
+            <div class="copy-link-box">
+                <input type="text" id="share-url-input" readonly>
+                <button class="copy-btn" id="copy-link-btn" onclick="copyShareLink()">Copy Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         ACTOR / PERSON FILMOGRAPHY MODAL
+         ═══════════════════════════════════════════════════════ -->
+    <div class="person-modal hidden" id="person-modal" role="dialog" aria-modal="true">
+        <div class="modal-backdrop" onclick="closePersonModal()"></div>
+        <div class="person-card">
+            <div class="person-header">
+                <div class="person-avatar-large" id="person-avatar">🎭</div>
+                <div class="person-info">
+                    <h3 class="person-name" id="person-name">Actor Name</h3>
+                    <p class="person-role-tag" id="person-role">Featured Filmography</p>
+                </div>
+                <button class="person-close-btn" onclick="closePersonModal()">✕</button>
+            </div>
+            <div class="person-filmography-grid" id="person-filmography-grid">
+                <!-- Filmography items -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         GLOBAL LOADING & TOAST
          ═══════════════════════════════════════════════════════ -->
     <div class="loading hidden" id="loading">
         <div class="loader">
             <div class="loader-ring"></div>
             <div class="loader-ring delay"></div>
-            <p>✨ Consulting Gemini AI...</p>
+            <p id="loading-text">✨ Exploring CineScope Universe...</p>
         </div>
     </div>
 
-    <div class="toast hidden" id="toast"></div>
+    <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 
     <!-- ═══════════════════════════════════════════════════════
          FOOTER
@@ -157,33 +430,41 @@
         <div class="footer-container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <span class="logo-icon">🎬</span>
-                    <span class="logo-text">Cine<span class="gradient-text">Scope</span></span>
-                    <p class="footer-desc">The next-generation movie reviewer & intelligence platform powered entirely by Google Gemini AI.</p>
+                    <div class="nav-brand" onclick="goHome()" role="button" tabindex="0">
+                        <span class="logo-icon">🎬</span>
+                        <span class="logo-text">Cine<span class="gradient-text">Scope</span></span>
+                    </div>
+                    <p class="footer-desc">The modern cinema explorer and critical intelligence platform. Discover trailers, reviews, financial metrics, streaming guides, and AI breakdowns.</p>
                 </div>
-                <div class="footer-apis">
-                    <h4>Core Technology</h4>
+
+                <div class="footer-tech">
+                    <h4>Core Technologies</h4>
                     <div class="api-badges">
-                        <span class="api-badge gemini">Google Gemini AI</span>
-                        <span class="api-badge python">Python Flask</span>
-                        <span class="api-badge js">Vanilla JavaScript</span>
+                        <span class="api-badge yt">YouTube Video Player</span>
+                        <span class="api-badge gemini">Gemini AI Engine</span>
+                        <span class="api-badge ratings">IMDb & RT Metrics</span>
+                        <span class="api-badge stream">Streaming Tracker</span>
                     </div>
                 </div>
-                <div class="footer-tech">
-                    <h4>Quick Links</h4>
+
+                <div class="footer-links-col">
+                    <h4>Explore</h4>
                     <ul class="footer-links">
-                        <li><a href="javascript:void(0)" onclick="showCategory('trending')">Trending</a></li>
-                        <li><a href="javascript:void(0)" onclick="showCategory('top-rated')">Top Rated</a></li>
-                        <li><a href="javascript:void(0)" onclick="showCategory('upcoming')">Upcoming</a></li>
+                        <li><a href="javascript:void(0)" onclick="showCategory('trending')">🔥 Trending</a></li>
+                        <li><a href="javascript:void(0)" onclick="showCategory('top-rated')">⭐ Top Rated</a></li>
+                        <li><a href="javascript:void(0)" onclick="showCategory('upcoming')">🎬 Upcoming</a></li>
+                        <li><a href="javascript:void(0)" onclick="showCategory('now-playing')">🍿 Now Playing</a></li>
                     </ul>
                 </div>
             </div>
+
             <div class="footer-bottom">
-                <p>Built with ❤️ &bull; Powered by <a href="https://ai.google.dev/" target="_blank">Google Gemini AI</a></p>
+                <p>Designed with ❤️ for Cinema Enthusiasts &bull; CineScope v2.0</p>
             </div>
         </div>
     </footer>
 
+    <!-- Application Script -->
     <script src="app.js"></script>
 </body>
 </html>

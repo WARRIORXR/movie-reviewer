@@ -1,130 +1,117 @@
-# CineScope 🎬 — Movie Reviewer & Explorer
+# CineScope 🎬 — Modern Movie Reviewer & Intelligence Platform
 
-A next-generation, full-stack movie discovery platform **powered 100% by Google Gemini AI** and built with **Python + JavaScript**. Search any movie and instantly get comprehensive intelligence, ratings, reviews, box office financials, where to watch, cast & crew, and AI-powered critical analysis!
+A state-of-the-art movie search, discovery, and intelligence website featuring real-time search suggestions, multi-criteria filtering, embedded YouTube 4K trailers, multi-source ratings (IMDb, Rotten Tomatoes, Metacritic, Gemini AI), box office financial metrics, streaming availability, clickable cast filmographies, interactive user reviews, watchlist favorites, social sharing, and dark/light mode toggle.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-movie--reviewer--three.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://movie-reviewer-three.vercel.app/)
-![CineScope](https://img.shields.io/badge/CineScope-Movie%20Reviewer-7c5cfc?style=for-the-badge)
-![Gemini](https://img.shields.io/badge/AI-Google%20Gemini-4285f4?style=for-the-badge&logo=google&logoColor=white)
+![CineScope](https://img.shields.io/badge/CineScope-Pro%20Edition-7c5cfc?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-Flask-3776ab?style=for-the-badge&logo=python&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-f7df1e?style=for-the-badge&logo=javascript&logoColor=black)
-
-🌐 **Live Website:** [https://movie-reviewer-three.vercel.app/](https://movie-reviewer-three.vercel.app/)
+![CSS3](https://img.shields.io/badge/CSS3-Glassmorphism%20%2B%20Themes-1572b6?style=for-the-badge&logo=css3&logoColor=white)
 
 ---
 
-## ✨ Features
+## ✨ Core Features & Capabilities
 
-| Feature | Powered By |
-|---------|------------|
-| 🔍 Natural Language & Title Search | Google Gemini AI |
-| 🤖 Deep AI Critical Analysis (Verdict, Score, Mood, Best For) | Google Gemini AI |
-| ⚖️ AI Strengths & Weaknesses Comparison | Google Gemini AI |
-| 💡 Trivia & Fun Facts Generation | Google Gemini AI |
-| ⭐ Multi-Source Ratings (IMDb, Rotten Tomatoes, Metacritic, Gemini AI) | Google Gemini AI |
-| 💰 Budget, Box Office Revenue, Profit/Loss, ROI % | Google Gemini AI |
-| 📺 Where to Stream/Rent/Buy across 200+ services | Google Gemini AI |
-| 🎥 Official Trailers & YouTube search clips | Google Gemini AI |
-| 🏆 Awards & Accolades (Oscars, Golden Globes, etc.) | Google Gemini AI |
-| 🎭 Full Cast & Crew details | Google Gemini AI |
-| 📝 Curated Critic & Audience Reviews | Google Gemini AI |
-| 🎞️ Similar Movie Recommendations | Google Gemini AI |
-| 🔥 Trending / Top Rated / Upcoming / Now Playing | Google Gemini AI |
-| 📱 Fully Responsive Dark UI | Vanilla CSS3 |
+### 🔍 1. Advanced Search Functionality
+- **Hero & Navbar Search Bars**: Prominently displayed search inputs with clear button and instant keyboard shortcut (`/` to focus).
+- **Real-Time Suggestions**: Instant dropdown suggestions as you type with poster thumbnails, title, release year, and star rating.
+- **Comprehensive Multi-Criteria Filtering**:
+  - **Genre Pills**: All, Action, Sci-Fi, Drama, Thriller, Crime, Adventure, Animation, Comedy, Fantasy, History.
+  - **Release Year**: All Years, 2025, 2024, 2023, 2020–2022, 2010s, 2000s, 1990s, Pre-1990 Classics.
+  - **Minimum Rating**: Any Rating, 8.5+ ⭐ Masterpieces, 8.0+ ⭐, 7.5+ ⭐, 7.0+ ⭐.
+  - **Language**: All, English (EN), Japanese (JA), Korean (KO), Spanish (ES), French (FR), Hindi (HI), German (DE), Italian (IT).
+  - **Sort By**: Most Popular, Highest Rated, Newest First, Oldest First, Title (A-Z).
+  - Active filter indicators with 1-click removal & "Reset Filters" button.
+
+### 🎥 2. Full Movie Information Display
+- **Visuals & Identity**: High-res poster, wide cinematic backdrop banner with atmospheric gradient mask, original/alternate title, and tagline.
+- **Key Metadata**: Release date, runtime (`Xh Ym`), age certification (`PG-13`, `R`), original language, country of origin, status, IMDb link.
+- **Ratings Showcase**:
+  - **IMDb Rating** with interactive visual star bar and vote counts.
+  - **Rotten Tomatoes Score** with fresh tomato icon.
+  - **Metacritic Score** badge.
+  - **Gemini AI Score** badge.
+- **Box Office & Financial Metrics**: Production budget, worldwide gross, US domestic revenue, net profit/loss, and Return on Investment (ROI %).
+- **Official Embedded YouTube Player**:
+  - Responsive 16:9 embedded player directly inside the modal.
+  - Interactive video switcher tabs (Official Trailer, Teaser, Behind The Scenes, Featurettes).
+- **Streaming Availability ("Where to Watch")**: Direct platform chips with subscription, rent, and buy options (Netflix, Max, Disney+, Prime Video, Apple TV, YouTube Movies).
+- **Clickable Cast & Crew**: Click any actor or director to open their dedicated **Person Filmography Modal** and view all their movies.
+- **Interactive User Reviews**:
+  - Read curated critic and audience reviews.
+  - **"Write a Review" Form**: Select 1–10 stars with interactive star hover, enter your name and review, and submit in real-time (persisted in `localStorage`).
+- **AI Critical Intelligence**: Gemini AI verdict, one-liner quote, mood & audience recommendations, cinematic strengths & weaknesses, and behind-the-scenes trivia.
+- **Similar Movie Recommendations**: Clickable carousel of related movies with ratings and release dates.
+
+### 🎨 3. Design & User Experience
+- **Dark / Light Mode Toggle**: Smooth transition between deep space dark theme and clean light theme, saved in `localStorage`.
+- **Modern Glassmorphism**: Translucent panels (`backdrop-filter: blur(20px)`), vibrant neon gradient accents, and subtle borders.
+- **Micro-Interactions**: Floating particle animations, hover zoom effects, shimmer loading states, and animated toast notifications.
+- **Mobile Responsive**: Fully adaptive layout for desktop, tablet, and mobile screens.
+
+### 💖 4. Additional Features
+- **Watchlist / Favorites**:
+  - 1-Click heart toggle button on every movie card and detail view.
+  - Dedicated **Watchlist Drawer** showing all saved titles with count badge and remove options.
+  - Stored permanently in browser `localStorage`.
+- **Social Media Sharing**:
+  - Share modal supporting Twitter / X, WhatsApp, Facebook, Reddit, LinkedIn, Telegram.
+  - Native `navigator.share` on mobile devices.
+  - 1-Click "Copy Movie URL" button with animated checkmark feedback.
+- **Curated Sections**: 🔥 Trending Blockbusters, ⭐ Top Rated, 🎬 Upcoming Releases, and 🍿 Now Playing in Theaters.
+
+---
 
 ## 🛠️ Tech Stack
 
-### Backend (Python)
-- **Flask** — Lightweight web server
-- **Requests** — Communicates with Google Gemini REST API
-- **Flask-CORS** — Cross-Origin Resource Sharing
-- **python-dotenv** — Environment configuration
+- **Backend**: Python 3.8+, Flask, Requests, Flask-CORS, python-dotenv
+- **Frontend**: Vanilla JavaScript (ES6+), HTML5 Semantic Markup, CSS3 Glassmorphism & Custom Properties
+- **APIs**: YouTube Embedded Video Player, Google Gemini AI (with built-in high-fidelity database fallback)
+- **Fonts**: Google Fonts (*Outfit*, *Inter*, *JetBrains Mono*)
 
-### Frontend (JavaScript + HTML + CSS)
-- **Vanilla JavaScript** — Pure ES6+ performance
-- **CSS3** — Dark glassmorphism, animated gradients, custom SVG artwork
-- **Google Fonts** — Inter, Outfit, JetBrains Mono
+---
 
-### API
-- **Google Gemini API** (`gemini-3.1-flash-lite`, `gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.6-flash`) — Generative movie intelligence & structured encyclopedia
+## 🚀 Getting Started Locally
 
-## 🌐 Live Deployment
-
-Try out the live application on Vercel:
-👉 **[https://movie-reviewer-three.vercel.app/](https://movie-reviewer-three.vercel.app/)**
-
-## 🚀 Local Getting Started
-
-### Prerequisites
-- Python 3.8+
-- pip
-
-### Installation
-
+### 1. Clone the repository
 ```bash
-# 1. Clone the repository
 git clone https://github.com/WARRIORXR/movie-reviewer.git
 cd movie-reviewer
-
-# 2. Install Python dependencies
-pip install -r requirements.txt
-
-# 3. Configure environment variables
-# Copy .env.example to .env and set your Gemini API key:
-cp .env.example .env
 ```
 
-### 4. Run the Server
+### 2. Install dependencies
+```bash
+pip install -r requirements.txt
+```
 
+### 3. Run the Flask Server
 ```bash
 python app.py
 ```
 
-### 5. Open in Browser
-Navigate to **http://localhost:5000** and start exploring!
+### 4. Open in Browser
+Navigate to **http://localhost:5000** in your browser.
+
+---
 
 ## 📁 Project Structure
 
 ```
 movie-reviewer/
-├── app.py              # Python Flask server (100% Gemini AI integration)
+├── app.py              # Flask server with REST API, search filters, and movie database
 ├── config.py           # Gemini API configuration & fallback models
 ├── requirements.txt    # Python dependencies
-├── .env.example        # Environment template (contains GEMINI_API_KEY)
+├── .env.example        # Environment template
 ├── static/
-│   ├── index.html      # Frontend interface
-│   ├── style.css       # Dark glassmorphic styling
-│   └── app.js          # Client-side logic & SVG poster generator
-├── README.md
+│   ├── index.html      # Responsive semantic HTML with modals & filter controls
+│   ├── style.css       # CSS styling with dark/light themes, glassmorphism, responsive grid
+│   └── app.js          # JavaScript engine (search, filters, player, watchlist, reviews)
+├── README.md           # Documentation
 └── .gitignore
 ```
 
-## 🏗️ Architecture
-
-```
-┌─────────────────────────┐          ┌────────────────────────────────┐
-│                         │          │      Python Flask Server       │
-│     Browser Client      │─────────▶│                                │
-│    (HTML / CSS / JS)    │◀─────────│   /api/search                  │
-│                         │          │   /api/movie/:title            │
-└─────────────────────────┘          │   /api/trending / /api/top-rated   │
-                                     └───────────────┬────────────────┘
-                                                     │
-                                                     ▼
-                                     ┌────────────────────────────────┐
-                                     │       Google Gemini API        │
-                                     │  (Structured JSON Generation)  │
-                                     └────────────────────────────────┘
-```
-
-## 🎨 Design Highlights
-
-- Ultra-dark aesthetic with purple & pink gradient accents
-- Floating particle animations on hero section
-- Circular AI score ring with dynamic percentage fills
-- Pros & Cons grid with colored indicator borders
-- Streaming platform chips with direct watch links
-- Responsive grid and drawer system for mobile and desktop
+---
 
 ## 📝 License
 
-MIT License — free to use and modify.
+MIT License — Free to use, modify, and distribute.

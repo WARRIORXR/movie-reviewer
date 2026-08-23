@@ -1,117 +1,146 @@
 # CineScope 🎬 — Modern Movie Reviewer & Intelligence Platform
 
-A state-of-the-art movie search, discovery, and intelligence website featuring real-time search suggestions, multi-criteria filtering, embedded YouTube 4K trailers, multi-source ratings (IMDb, Rotten Tomatoes, Metacritic, Gemini AI), box office financial metrics, streaming availability, clickable cast filmographies, interactive user reviews, watchlist favorites, social sharing, and dark/light mode toggle.
-
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-movie--reviewer--three.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://movie-reviewer-three.vercel.app/)
-![CineScope](https://img.shields.io/badge/CineScope-Pro%20Edition-7c5cfc?style=for-the-badge)
+![CineScope](https://img.shields.io/badge/CineScope-Pro%20v2.0-7c5cfc?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-Flask-3776ab?style=for-the-badge&logo=python&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-f7df1e?style=for-the-badge&logo=javascript&logoColor=black)
 ![CSS3](https://img.shields.io/badge/CSS3-Glassmorphism%20%2B%20Themes-1572b6?style=for-the-badge&logo=css3&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)
+
+**CineScope** is a high-performance, ultra-modern movie discovery, review, and intelligence platform. Built with a lightweight Python Flask backend and a modern glassmorphic vanilla JavaScript frontend, it delivers official 4K YouTube trailers, multi-source ratings (IMDb, Rotten Tomatoes, Metacritic, Gemini AI), box office financial analytics, streaming availability, cast filmographies, interactive community reviews, persistent watchlists, and AI-powered critical breakdowns.
 
 ---
 
-## ✨ Core Features & Capabilities
+## ✨ Key Features
 
-### 🔍 1. Advanced Search Functionality
-- **Hero & Navbar Search Bars**: Prominently displayed search inputs with clear button and instant keyboard shortcut (`/` to focus).
-- **Real-Time Suggestions**: Instant dropdown suggestions as you type with poster thumbnails, title, release year, and star rating.
-- **Comprehensive Multi-Criteria Filtering**:
+### 🔍 1. Intelligent Search & Multi-Criteria Filtering
+- **Quick Keyboard Search**: Press `/` anywhere to instantly focus the search bar.
+- **Real-Time Auto-Suggestions**: Debounced instant suggestions with poster thumbnails, release dates, and star ratings.
+- **Dynamic Multi-Filters**:
   - **Genre Pills**: All, Action, Sci-Fi, Drama, Thriller, Crime, Adventure, Animation, Comedy, Fantasy, History.
-  - **Release Year**: All Years, 2025, 2024, 2023, 2020–2022, 2010s, 2000s, 1990s, Pre-1990 Classics.
-  - **Minimum Rating**: Any Rating, 8.5+ ⭐ Masterpieces, 8.0+ ⭐, 7.5+ ⭐, 7.0+ ⭐.
-  - **Language**: All, English (EN), Japanese (JA), Korean (KO), Spanish (ES), French (FR), Hindi (HI), German (DE), Italian (IT).
-  - **Sort By**: Most Popular, Highest Rated, Newest First, Oldest First, Title (A-Z).
-  - Active filter indicators with 1-click removal & "Reset Filters" button.
+  - **Release Era**: 2025 (Latest), 2024, 2023, 2020–2022, 2010s, 2000s, 1990s, Pre-1990 Classics.
+  - **Rating Range**: Any Rating, 8.5+ ⭐ Masterpiece, 8.0+ ⭐, 7.5+ ⭐, 7.0+ ⭐.
+  - **Language**: English, Japanese, Korean, Spanish, French, Hindi, German, Italian.
+  - **Sort Modes**: Most Popular, Highest Rated, Newest, Oldest, Title (A–Z).
+- **Active Filter Chips**: Removable filter tags with 1-click reset.
 
-### 🎥 2. Full Movie Information Display
-- **Visuals & Identity**: High-res poster, wide cinematic backdrop banner with atmospheric gradient mask, original/alternate title, and tagline.
-- **Key Metadata**: Release date, runtime (`Xh Ym`), age certification (`PG-13`, `R`), original language, country of origin, status, IMDb link.
-- **Ratings Showcase**:
-  - **IMDb Rating** with interactive visual star bar and vote counts.
-  - **Rotten Tomatoes Score** with fresh tomato icon.
-  - **Metacritic Score** badge.
-  - **Gemini AI Score** badge.
-- **Box Office & Financial Metrics**: Production budget, worldwide gross, US domestic revenue, net profit/loss, and Return on Investment (ROI %).
-- **Official Embedded YouTube Player**:
-  - Responsive 16:9 embedded player directly inside the modal.
-  - Interactive video switcher tabs (Official Trailer, Teaser, Behind The Scenes, Featurettes).
-- **Streaming Availability ("Where to Watch")**: Direct platform chips with subscription, rent, and buy options (Netflix, Max, Disney+, Prime Video, Apple TV, YouTube Movies).
-- **Clickable Cast & Crew**: Click any actor or director to open their dedicated **Person Filmography Modal** and view all their movies.
-- **Interactive User Reviews**:
-  - Read curated critic and audience reviews.
-  - **"Write a Review" Form**: Select 1–10 stars with interactive star hover, enter your name and review, and submit in real-time (persisted in `localStorage`).
-- **AI Critical Intelligence**: Gemini AI verdict, one-liner quote, mood & audience recommendations, cinematic strengths & weaknesses, and behind-the-scenes trivia.
-- **Similar Movie Recommendations**: Clickable carousel of related movies with ratings and release dates.
+### 🎥 2. Cinematic Detail Modal & Embedded 4K Player
+- **Official YouTube Player**: Responsive 16:9 embedded player with clip switching tabs (Trailers, Teasers, Featurettes, Behind-the-Scenes).
+- **Multi-Source Ratings**: Side-by-side comparison of **IMDb**, **Rotten Tomatoes**, **Metacritic**, and **Gemini AI** scores.
+- **Box Office & Financials**: Production budget, worldwide revenue, domestic gross, net profit/loss, and Return on Investment (ROI %).
+- **Streaming Tracker**: Instant "Where to Watch" direct links for Netflix, Max, Apple TV, Amazon Prime Video, and YouTube Movies.
+- **Clickable Cast & Crew**: Click any actor or director to explore their full filmography.
+- **AI Critical Breakdown**: In-depth Gemini AI verdict, key themes, pros/cons, and behind-the-scenes trivia.
 
-### 🎨 3. Design & User Experience
-- **Dark / Light Mode Toggle**: Smooth transition between deep space dark theme and clean light theme, saved in `localStorage`.
-- **Modern Glassmorphism**: Translucent panels (`backdrop-filter: blur(20px)`), vibrant neon gradient accents, and subtle borders.
-- **Micro-Interactions**: Floating particle animations, hover zoom effects, shimmer loading states, and animated toast notifications.
-- **Mobile Responsive**: Fully adaptive layout for desktop, tablet, and mobile screens.
+### 🔔 3. UI Stability & Modern Feedback System
+- **Typed Toast Notifications**: Color-coded toasts with progress bar countdowns and dismiss buttons for `success`, `error`, `warning`, and `info`.
+- **Skeleton Shimmer Placeholders**: Smooth loading placeholders during initial boot and category transitions to eliminate layout shifts.
+- **Graceful Image Error Handling**: Dynamic fallback SVG posters for missing or broken image URLs.
+- **Network Resilience**: Automatic online/offline status detection, error counting, and a top-level network recovery banner.
+- **Prevent Double-Submission**: Button loading spinners (`.btn-loading`) with debounced actions.
 
-### 💖 4. Additional Features
-- **Watchlist / Favorites**:
-  - 1-Click heart toggle button on every movie card and detail view.
-  - Dedicated **Watchlist Drawer** showing all saved titles with count badge and remove options.
-  - Stored permanently in browser `localStorage`.
-- **Social Media Sharing**:
-  - Share modal supporting Twitter / X, WhatsApp, Facebook, Reddit, LinkedIn, Telegram.
-  - Native `navigator.share` on mobile devices.
-  - 1-Click "Copy Movie URL" button with animated checkmark feedback.
-- **Curated Sections**: 🔥 Trending Blockbusters, ⭐ Top Rated, 🎬 Upcoming Releases, and 🍿 Now Playing in Theaters.
+### 💖 4. Watchlist & Community Reviews
+- **Persistent Watchlist**: Save favorites with a single click, stored in browser `localStorage`.
+- **Interactive Review System**: 1–10 star interactive selector with real-time feedback, validation, and persistent storage.
+- **Social Sharing**: Share to Twitter/X, WhatsApp, Facebook, Reddit, LinkedIn, Telegram, or copy the direct movie URL with 1-click.
+- **Theme Toggle**: Seamless switch between Dark Mode and Light Mode with persisted user preference.
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Architecture & Tech Stack
 
-- **Backend**: Python 3.8+, Flask, Requests, Flask-CORS, python-dotenv
-- **Frontend**: Vanilla JavaScript (ES6+), HTML5 Semantic Markup, CSS3 Glassmorphism & Custom Properties
-- **APIs**: YouTube Embedded Video Player, Google Gemini AI (with built-in high-fidelity database fallback)
-- **Fonts**: Google Fonts (*Outfit*, *Inter*, *JetBrains Mono*)
+| Layer | Technologies |
+| :--- | :--- |
+| **Backend** | Python 3.8+, Flask, Flask-CORS, Requests, python-dotenv |
+| **Frontend** | HTML5 Semantic Elements, Modern CSS3 (CSS Variables, Flexbox/Grid, Glassmorphism, Keyframe Animations), Vanilla JS (ES6+) |
+| **AI Engine** | Google Gemini API (`gemini-3.5-flash`, `gemini-3.1-flash-lite`) with curated in-memory fallback database |
+| **Media Player** | Official YouTube Iframe Embed API |
+| **Fonts** | Google Fonts (*Outfit*, *Inter*, *JetBrains Mono*) |
 
 ---
 
 ## 🚀 Getting Started Locally
 
-### 1. Clone the repository
+### Prerequisites
+- Python 3.8+ installed
+- Git
+
+### 1. Clone Repository
 ```bash
 git clone https://github.com/WARRIORXR/movie-reviewer.git
 cd movie-reviewer
 ```
 
-### 2. Install dependencies
+### 2. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Run the Flask Server
+### 3. (Optional) Configure Gemini API Key
+Create a `.env` file in the root directory:
+```env
+GEMINI_API_KEY=your_google_gemini_api_key_here
+```
+> *Note: CineScope includes a rich built-in movie database and will work immediately even without an API key.*
+
+### 4. Start the Application
 ```bash
 python app.py
 ```
 
-### 4. Open in Browser
-Navigate to **http://localhost:5000** in your browser.
+### 5. Access the Web App
+Open your browser and navigate to:
+```
+http://localhost:5000
+```
 
 ---
 
-## 📁 Project Structure
+## 📡 REST API Reference
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `GET /` | `GET` | Serves the main web application |
+| `GET /api/trending` | `GET` | Returns trending blockbuster movies |
+| `GET /api/top-rated` | `GET` | Returns all-time highest rated movies |
+| `GET /api/upcoming` | `GET` | Returns upcoming anticipated movies |
+| `GET /api/now-playing` | `GET` | Returns movies currently in theaters & streaming |
+| `GET /api/genres` | `GET` | Lists all supported movie genres |
+| `GET /api/search` | `GET` | Multi-criteria search with `q`, `genre`, `year`, `rating`, `lang`, `sort`, `page` |
+| `GET /api/movie/<id_or_title>` | `GET` | Comprehensive details, trailers, financials, cast, and AI analysis |
+| `GET /api/person/<name>` | `GET` | Filmography and movies associated with an actor or director |
+
+---
+
+## 📁 Repository Structure
 
 ```
 movie-reviewer/
-├── app.py              # Flask server with REST API, search filters, and movie database
-├── config.py           # Gemini API configuration & fallback models
-├── requirements.txt    # Python dependencies
-├── .env.example        # Environment template
+├── app.py              # Flask server, REST API endpoints, caching & database
+├── config.py           # Gemini AI model definitions and configuration
+├── requirements.txt    # Python package dependencies
+├── .env.example        # Environment variable template
+├── .gitignore          # Git ignore rules
 ├── static/
-│   ├── index.html      # Responsive semantic HTML with modals & filter controls
-│   ├── style.css       # CSS styling with dark/light themes, glassmorphism, responsive grid
-│   └── app.js          # JavaScript engine (search, filters, player, watchlist, reviews)
-├── README.md           # Documentation
-└── .gitignore
+│   ├── index.html      # Glassmorphism frontend layout and accessible modals
+│   ├── style.css       # Design tokens, dark/light themes, animations & responsive styles
+│   └── app.js          # Interactive application logic, search, toast system, player
+└── README.md           # Documentation
 ```
+
+---
+
+## 🤝 Contributing
+
+Contributions, feature suggestions, and pull requests are welcome!
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'feat: Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
 ## 📝 License
 
-MIT License — Free to use, modify, and distribute.
+Distributed under the MIT License. See `LICENSE` for more information.

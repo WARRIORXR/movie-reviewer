@@ -58,7 +58,7 @@ function toggleTheme() {
     document.documentElement.setAttribute('data-theme', newTheme);
     localStorage.setItem('cinescope_theme', newTheme);
     updateThemeIcon(newTheme);
-    showToast(`Switched to ${newTheme.toUpperCase()} mode`);
+    showToast(`Switched to ${newTheme.toUpperCase()} mode`, 'info');
 }
 
 function updateThemeIcon(theme) {
@@ -98,9 +98,11 @@ async function apiFetch(endpoint) {
     try {
         const res = await fetch(API_BASE + endpoint);
         if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+        // Reset network error count on success
+        if (networkErrorCount > 0) networkErrorCount = Math.max(0, networkErrorCount - 1);
         return await res.json();
     } catch (err) {
-        console.error(`API Fetch Error on ${endpoint}:`, err);
+        handleNetworkError(endpoint, err);
         throw err;
     }
 }
@@ -110,6 +112,12 @@ async function apiFetch(endpoint) {
 // ═══════════════════════════════════════════════════════
 
 async function loadAllCategories() {
+    // Show skeleton placeholders while loading
+    renderSkeletonCards('trending-grid', 6);
+    renderSkeletonCards('top-rated-grid', 6);
+    renderSkeletonCards('upcoming-grid', 4);
+    renderSkeletonCards('now-playing-grid', 6);
+
     try {
         const [trending, topRated, upcoming, nowPlaying] = await Promise.all([
             apiFetch('/api/trending'),
@@ -124,6 +132,7 @@ async function loadAllCategories() {
         renderMovieScroll(nowPlaying.results, 'now-playing-grid');
     } catch (err) {
         console.warn('Initial categories loading fallback:', err);
+        showToast('Could not load movie categories. Please check your connection.', 'error');
     }
 }
 
@@ -293,7 +302,7 @@ async function applyFilters(page = 1) {
         renderPagination(page, data.total_pages);
         showResultsSection();
     } catch (err) {
-        showToast('Search encountered an error. Showing cached results.');
+        showToast('Search encountered an error. Please try again.', 'error');
     } finally {
         hideLoading();
     }
@@ -368,7 +377,7 @@ function resetAllFilters() {
     });
 
     applyFilters(1);
-    showToast('Filters reset to default');
+    showToast('Filters reset to default', 'info');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -377,6 +386,8 @@ function resetAllFilters() {
 
 async function showCategory(cat) {
     showLoading();
+    // Show skeletons in results grid while loading
+    renderSkeletonCards('results-grid', 8);
     try {
         const data = await apiFetch(`/api/${cat}`);
         const titles = {
@@ -396,7 +407,7 @@ async function showCategory(cat) {
         if (pagination) pagination.classList.add('hidden');
         showResultsSection();
     } catch (err) {
-        showToast('Failed to load category');
+        showToast('Failed to load category. Please try again.', 'error');
     } finally {
         hideLoading();
     }
@@ -565,7 +576,7 @@ async function openMovieDetail(movieTitleOrIdent, movieId = 0) {
         currentMovieData = movie;
         renderMovieModal(movie);
     } catch (err) {
-        showToast('Failed to retrieve full movie details.');
+        showToast('Failed to retrieve movie details. Please try again.', 'error');
     } finally {
         hideLoading();
     }
@@ -913,12 +924,15 @@ function submitUserReview() {
     const author = authorInput ? authorInput.value.trim() : '';
     const content = contentInput ? contentInput.value.trim() : '';
 
+    // Validation with visual feedback
     if (!author) {
-        showToast('Please enter your name');
+        showToast('Please enter your name or handle', 'warning');
+        if (authorInput) { authorInput.focus(); authorInput.style.borderColor = 'var(--orange)'; setTimeout(() => authorInput.style.borderColor = '', 2000); }
         return;
     }
     if (!content || content.length < 5) {
-        showToast('Please write a brief review comment');
+        showToast('Please write at least a short review (5+ characters)', 'warning');
+        if (contentInput) { contentInput.focus(); contentInput.style.borderColor = 'var(--orange)'; setTimeout(() => contentInput.style.borderColor = '', 2000); }
         return;
     }
 
@@ -943,7 +957,7 @@ function submitUserReview() {
     const list = document.getElementById('modal-reviews-list');
     if (list) {
         const reviewHTML = `
-            <div class="review-card" style="border-color: var(--accent-primary)">
+            <div class="review-card" style="border-color: var(--accent-primary); animation: cardFadeUp 0.3s ease-out">
                 <div class="review-header">
                     <div class="review-avatar">${esc(newReview.author.charAt(0).toUpperCase())}</div>
                     <div>
@@ -958,7 +972,7 @@ function submitUserReview() {
         list.insertAdjacentHTML('afterbegin', reviewHTML);
     }
 
-    showToast('✨ Review published successfully!');
+    showToast('✨ Review published successfully!', 'success');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -999,7 +1013,7 @@ function toggleWatchlistMovie(movie) {
 
     if (existingIndex >= 0) {
         watchlist.splice(existingIndex, 1);
-        showToast(`Removed "${movie.title}" from Watchlist`);
+        showToast(`Removed "${movie.title}" from Watchlist`, 'info');
     } else {
         watchlist.unshift({
             id: movie.id || Math.floor(Math.random() * 1000000),
@@ -1008,7 +1022,7 @@ function toggleWatchlistMovie(movie) {
             vote_average: movie.vote_average,
             release_date: movie.release_date
         });
-        showToast(`Added "${movie.title}" to Watchlist ❤️`);
+        showToast(`Added "${movie.title}" to Watchlist ❤️`, 'success');
     }
 
     localStorage.setItem('cinescope_watchlist', JSON.stringify(watchlist));
@@ -1072,7 +1086,7 @@ function clearWatchlist() {
     localStorage.setItem('cinescope_watchlist', JSON.stringify([]));
     updateWatchlistBadge();
     openWatchlistDrawer();
-    showToast('Watchlist cleared');
+    showToast('Watchlist cleared', 'info');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1167,7 +1181,7 @@ async function openPersonModal(personName) {
 
         if (modal) modal.classList.remove('hidden');
     } catch (err) {
-        showToast(`Could not load details for ${personName}`);
+        showToast(`Could not load details for ${personName}`, 'error');
     } finally {
         hideLoading();
     }
@@ -1219,11 +1233,173 @@ function hideLoading() {
     document.getElementById('loading')?.classList.add('hidden');
 }
 
-function showToast(msg) {
+function showToast(msg, type = 'auto') {
+    const t = document.getElementById('toast');
+    const msgEl = document.getElementById('toast-msg');
+    const iconEl = document.getElementById('toast-icon');
+    const progressEl = document.getElementById('toast-progress');
+    if (!t || !msgEl) return;
+
+    // Auto-detect type from message content
+    if (type === 'auto') {
+        const lower = msg.toLowerCase();
+        if (lower.includes('error') || lower.includes('fail') || lower.includes('could not')) type = 'error';
+        else if (lower.includes('warning') || lower.includes('⚠')) type = 'warning';
+        else if (lower.includes('added') || lower.includes('success') || lower.includes('published') || lower.includes('copied') || lower.includes('✨') || lower.includes('❤️')) type = 'success';
+        else type = 'info';
+    }
+
+    // Set icon
+    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+    if (iconEl) iconEl.textContent = icons[type] || '✨';
+
+    // Set message
+    msgEl.textContent = msg;
+
+    // Set variant class
+    t.className = 'toast toast-' + type;
+
+    // Reset progress animation
+    if (progressEl) {
+        progressEl.style.animation = 'none';
+        // Force reflow then re-apply
+        void progressEl.offsetHeight;
+        progressEl.style.animation = 'toastProgress 3.5s linear forwards';
+    }
+
+    // Auto-dismiss after timer
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => dismissToast(), 3500);
+}
+
+function dismissToast() {
     const t = document.getElementById('toast');
     if (!t) return;
-    t.textContent = msg;
-    t.classList.remove('hidden');
     clearTimeout(t._timer);
-    t._timer = setTimeout(() => t.classList.add('hidden'), 3500);
+    t.classList.add('toast-exit');
+    setTimeout(() => {
+        t.classList.add('hidden');
+        t.classList.remove('toast-exit');
+    }, 300);
 }
+
+// ═══════════════════════════════════════════════════════
+//  NETWORK ERROR BANNER & RETRY
+// ═══════════════════════════════════════════════════════
+
+let networkErrorCount = 0;
+const MAX_NETWORK_ERRORS_BEFORE_BANNER = 2;
+
+function handleNetworkError(endpoint, err) {
+    networkErrorCount++;
+    console.error(`Network error on ${endpoint}:`, err);
+
+    if (networkErrorCount >= MAX_NETWORK_ERRORS_BEFORE_BANNER) {
+        showNetworkBanner();
+    }
+}
+
+function showNetworkBanner() {
+    const banner = document.getElementById('network-banner');
+    if (banner) banner.classList.remove('hidden');
+}
+
+function dismissNetworkBanner() {
+    const banner = document.getElementById('network-banner');
+    if (banner) banner.classList.add('hidden');
+    networkErrorCount = 0;
+}
+
+async function retryConnection() {
+    dismissNetworkBanner();
+    showToast('Retrying connection...', 'info');
+    try {
+        await apiFetch('/api/trending');
+        showToast('Connection restored! Reloading data...', 'success');
+        networkErrorCount = 0;
+        loadAllCategories();
+    } catch (err) {
+        showToast('Still unable to connect. Please check your network.', 'error');
+        showNetworkBanner();
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SKELETON LOADING PLACEHOLDERS
+// ═══════════════════════════════════════════════════════
+
+function renderSkeletonCards(containerId, count = 6) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        html += `
+            <div class="skeleton-card" style="animation-delay: ${i * 0.06}s">
+                <div class="skeleton skeleton-poster"></div>
+                <div class="skeleton skeleton-line medium"></div>
+                <div class="skeleton skeleton-line short"></div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  IMAGE LOADING WITH FALLBACK
+// ═══════════════════════════════════════════════════════
+
+function setupImageFallbacks() {
+    document.querySelectorAll('.poster').forEach(img => {
+        if (img._fallbackBound) return;
+        img._fallbackBound = true;
+        img.addEventListener('error', function() {
+            this.classList.add('img-error');
+            this.src = getPosterSrc(null, this.alt || 'Movie');
+        });
+    });
+}
+
+// Auto-setup fallbacks after renders
+const _origRenderGrid = renderMovieGrid;
+renderMovieGrid = function(movies, containerId) {
+    _origRenderGrid(movies, containerId);
+    requestAnimationFrame(() => setupImageFallbacks());
+};
+
+const _origRenderScroll = renderMovieScroll;
+renderMovieScroll = function(movies, containerId) {
+    _origRenderScroll(movies, containerId);
+    requestAnimationFrame(() => setupImageFallbacks());
+};
+
+// ═══════════════════════════════════════════════════════
+//  BUTTON LOADING STATE HELPERS
+// ═══════════════════════════════════════════════════════
+
+function setButtonLoading(btnId, loading = true) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (loading) {
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+    } else {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+//  ONLINE/OFFLINE DETECTION
+// ═══════════════════════════════════════════════════════
+
+window.addEventListener('online', () => {
+    dismissNetworkBanner();
+    showToast('You are back online!', 'success');
+    networkErrorCount = 0;
+});
+
+window.addEventListener('offline', () => {
+    showToast('You are offline. Some features may not work.', 'warning');
+    showNetworkBanner();
+});
+

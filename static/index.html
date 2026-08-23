@@ -421,7 +421,20 @@
         </div>
     </div>
 
-    <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+    <div class="toast hidden" id="toast" role="status" aria-live="polite">
+        <div class="toast-body">
+            <span class="toast-icon" id="toast-icon">✨</span>
+            <span class="toast-msg" id="toast-msg"></span>
+            <button class="toast-dismiss" onclick="dismissToast()" aria-label="Dismiss notification">✕</button>
+        </div>
+        <div class="toast-progress" id="toast-progress"></div>
+    </div>
+
+    <div class="network-banner hidden" id="network-banner">
+        <span>⚠️ Network issue detected — some features may be unavailable</span>
+        <button onclick="retryConnection()">Retry</button>
+        <button onclick="dismissNetworkBanner()">Dismiss</button>
+    </div>
 
     <!-- ═══════════════════════════════════════════════════════
          FOOTER

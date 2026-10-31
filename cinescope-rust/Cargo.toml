@@ -1,0 +1,13 @@
+[package]
+name = "cinescope"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+serde = "1"
+serde_json = "1"
+reqwest = { version = "0.12", features = ["json"] }
+tower-http = { version = "0.6", features = ["fs", "cors"] }
+dotenvy = "0.15"
